@@ -15,12 +15,13 @@
     "moduleDetection": "force",
     "allowJs": true,
     "jsx": "react-jsx",
+    "baseUrl": ".",
     "paths": {
       "@/*": [
         "./*"
       ]
     },
-    "types": ["vite/client"],
+    "types": ["vite/client", "node"],
     "allowImportingTsExtensions": true,
     "noEmit": true
   }

@@ -12,11 +12,20 @@ export type Option = {
   name: string;
   description: string;
   monthlyCost: number;
+  weeklyPrice?: number;
   emoji?: string;
   image?: string;
   category?: string;
+  type?: string;
+  isPlus?: boolean;
+  items?: string[];
   service?: string;
   planType?: 'ads' | 'no-ads' | 'standard';
+  planName?: string;
+  data?: string;
+  hotspot?: string;
+  access?: string;
+  notes?: string;
 };
 
 export type QuizState = {

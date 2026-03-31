@@ -1,34 +1,34 @@
-import { Region, Option } from '../types';
+﻿import { Region, Option } from '../types';
 
 export const REGIONS: Region[] = [
-  { id: 'panhandle', name: 'Panhandle', majorCity: 'Amarillo', costMultiplier: 0.9, emoji: '🤠' },
-  { id: 'south-plains', name: 'South Plains', majorCity: 'Lubbock', costMultiplier: 0.92, emoji: '🌾' },
-  { id: 'north-texas', name: 'North Texas', majorCity: 'Wichita Falls', costMultiplier: 0.88, emoji: '🌪️' },
-  { id: 'north-central', name: 'North Central', majorCity: 'Arlington', costMultiplier: 1.1, emoji: '🎢' },
-  { id: 'tarrant', name: 'Tarrant County', majorCity: 'Fort Worth', costMultiplier: 1.15, emoji: '🐂' },
-  { id: 'dallas', name: 'Dallas', majorCity: 'Dallas', costMultiplier: 1.25, emoji: '🏙️' },
-  { id: 'northeast', name: 'Northeast', majorCity: 'Texarkana', costMultiplier: 0.85, emoji: '🌲' },
-  { id: 'east-texas', name: 'East Texas', majorCity: 'Tyler', costMultiplier: 0.9, emoji: '🌹' },
-  { id: 'west-central', name: 'West Central', majorCity: 'Abilene', costMultiplier: 0.87, emoji: '🌵' },
-  { id: 'upper-rio', name: 'Upper Rio Grande', majorCity: 'El Paso', costMultiplier: 0.95, emoji: '⛰️' },
-  { id: 'permian', name: 'Permian Basin', majorCity: 'Midland', costMultiplier: 1.05, emoji: '🛢️' },
-  { id: 'concho', name: 'Concho Valley', majorCity: 'San Angelo', costMultiplier: 0.88, emoji: '🐑' },
-  { id: 'heart-texas', name: 'Heart of Texas', majorCity: 'Waco', costMultiplier: 0.93, emoji: '❤️' },
-  { id: 'capital', name: 'Capital Area', majorCity: 'Austin', costMultiplier: 1.4, emoji: '🎸' },
-  { id: 'rural-capital', name: 'Rural Capital', majorCity: 'Round Rock', costMultiplier: 1.2, emoji: '⚾' },
-  { id: 'brazos', name: 'Brazos Valley', majorCity: 'College Station', costMultiplier: 0.98, emoji: '🏈' },
-  { id: 'deep-east', name: 'Deep East Texas', majorCity: 'Lufkin', costMultiplier: 0.82, emoji: '🦌' },
-  { id: 'southeast', name: 'South East Texas', majorCity: 'Beaumont', costMultiplier: 0.88, emoji: '🚢' },
-  { id: 'golden-crescent', name: 'Golden Crescent', majorCity: 'Victoria', costMultiplier: 0.9, emoji: '🐚' },
   { id: 'alamo', name: 'Alamo', majorCity: 'San Antonio', costMultiplier: 1.05, emoji: '🌮' },
-  { id: 'south-texas', name: 'South Texas', majorCity: 'Laredo', costMultiplier: 0.85, emoji: '🌶️' },
-  { id: 'coastal-bend', name: 'Coastal Bend', majorCity: 'Corpus Christi', costMultiplier: 0.95, emoji: '🏖️' },
-  { id: 'lower-rio', name: 'Lower Rio Grande', majorCity: 'McAllen', costMultiplier: 0.82, emoji: '🌴' },
+  { id: 'brazos', name: 'Brazos Valley', majorCity: 'College Station', costMultiplier: 0.98, emoji: '🏈' },
   { id: 'cameron', name: 'Cameron County', majorCity: 'Brownsville', costMultiplier: 0.8, emoji: '🚀' },
-  { id: 'texoma', name: 'Texoma', majorCity: 'Sherman', costMultiplier: 0.92, emoji: '🎣' },
+  { id: 'capital', name: 'Capital Area', majorCity: 'Austin', costMultiplier: 1.4, emoji: '🎸' },
   { id: 'central-texas', name: 'Central Texas', majorCity: 'Killeen', costMultiplier: 0.95, emoji: '🎖️' },
-  { id: 'middle-rio', name: 'Middle Rio Grande', majorCity: 'Eagle Pass', costMultiplier: 0.8, emoji: '🦅' },
+  { id: 'coastal-bend', name: 'Coastal Bend', majorCity: 'Corpus Christi', costMultiplier: 0.95, emoji: '🏖️' },
+  { id: 'concho', name: 'Concho Valley', majorCity: 'San Angelo', costMultiplier: 0.88, emoji: '🐑' },
+  { id: 'dallas', name: 'Dallas', majorCity: 'Dallas', costMultiplier: 1.25, emoji: '🏙️' },
+  { id: 'deep-east', name: 'Deep East Texas', majorCity: 'Lufkin', costMultiplier: 0.82, emoji: '🦌' },
+  { id: 'east-texas', name: 'East Texas', majorCity: 'Tyler', costMultiplier: 0.9, emoji: '🌹' },
+  { id: 'golden-crescent', name: 'Golden Crescent', majorCity: 'Victoria', costMultiplier: 0.9, emoji: '🐚' },
   { id: 'gulf-coast', name: 'Gulf Coast', majorCity: 'Houston', costMultiplier: 1.2, emoji: '🚀' },
+  { id: 'heart-texas', name: 'Heart of Texas', majorCity: 'Waco', costMultiplier: 0.93, emoji: '❤️' },
+  { id: 'lower-rio', name: 'Lower Rio Grande', majorCity: 'McAllen', costMultiplier: 0.82, emoji: '🌴' },
+  { id: 'middle-rio', name: 'Middle Rio Grande', majorCity: 'Eagle Pass', costMultiplier: 0.8, emoji: '🦅' },
+  { id: 'north-central', name: 'North Central', majorCity: 'Arlington', costMultiplier: 1.1, emoji: '🎢' },
+  { id: 'northeast', name: 'Northeast', majorCity: 'Texarkana', costMultiplier: 0.85, emoji: '🌲' },
+  { id: 'north-texas', name: 'North Texas', majorCity: 'Wichita Falls', costMultiplier: 0.88, emoji: '🌪️' },
+  { id: 'panhandle', name: 'Panhandle', majorCity: 'Amarillo', costMultiplier: 0.9, emoji: '🤠' },
+  { id: 'permian', name: 'Permian Basin', majorCity: 'Midland', costMultiplier: 1.05, emoji: '🛢️' },
+  { id: 'rural-capital', name: 'Rural Capital', majorCity: 'Round Rock', costMultiplier: 1.2, emoji: '⚾' },
+  { id: 'southeast', name: 'South East Texas', majorCity: 'Beaumont', costMultiplier: 0.88, emoji: '🚢' },
+  { id: 'south-plains', name: 'South Plains', majorCity: 'Lubbock', costMultiplier: 0.92, emoji: '🌾' },
+  { id: 'south-texas', name: 'South Texas', majorCity: 'Laredo', costMultiplier: 0.85, emoji: '🌶️' },
+  { id: 'tarrant', name: 'Tarrant County', majorCity: 'Fort Worth', costMultiplier: 1.15, emoji: '🐂' },
+  { id: 'texoma', name: 'Texoma', majorCity: 'Sherman', costMultiplier: 0.92, emoji: '🎣' },
+  { id: 'upper-rio', name: 'Upper Rio Grande', majorCity: 'El Paso', costMultiplier: 0.95, emoji: '⛰️' },
+  { id: 'west-central', name: 'West Central', majorCity: 'Abilene', costMultiplier: 0.87, emoji: '🌵' },
 ];
 
 export const HOUSING_OPTIONS: Option[] = [
@@ -40,21 +40,104 @@ export const HOUSING_OPTIONS: Option[] = [
   { id: 'buy-house', name: 'Buy a House', description: 'Homeownership with a mortgage.', monthlyCost: 2700, emoji: '🏰', image: 'https://res.cloudinary.com/dgmjfix9t/image/upload/v1774632318/AdobeStock_10585522_zz5uha.jpg' },
 ];
 
+export const PHONE_SUB_OPTIONS = {
+  refurbished: [
+    { id: 'refurb-18', name: 'iPhone 18', description: 'Original: $1,240', price: 1240, months: 12, emoji: '🍏' },
+    { id: 'refurb-19', name: 'iPhone 19', description: 'Refurbished Price: $822', price: 822, months: 12, emoji: '🍎' },
+    { id: 'refurb-20', name: 'iPhone 20', description: 'Refurbished Price: $900', price: 900, months: 12, emoji: '✨' },
+  ],
+  new: [
+    { id: 'new-21-256', name: 'iPhone 21 (256GB)', description: '$1,399 Retail', price: 1399, months: 24, emoji: '🚀' },
+    { id: 'new-21-512', name: 'iPhone 21 (512GB)', description: '$1,599 Retail', price: 1599, months: 24, emoji: '📸' },
+    { id: 'new-21-1tb', name: 'iPhone 21 (1TB)', description: '$1,799 Retail', price: 1799, months: 36, emoji: '🎥' },
+    { id: 'new-21-2tb', name: 'iPhone 21 (2TB)', description: '$2,199 Retail', price: 2199, months: 36, emoji: '🌌' },
+  ]
+} as const;
+
 export const PHONE_OPTIONS: Option[] = [
-  { id: 'keep-current', name: 'Keep my current phone', description: 'It will last a few more years.', monthlyCost: 0, emoji: '📱', image: 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&q=80&w=800' },
-  { id: 'refurb-18', name: 'Refurbished iPhone 18', description: 'Reliable refurbished model.', monthlyCost: 62, emoji: '🍏', image: 'https://res.cloudinary.com/dgmjfix9t/image/upload/v1774632707/iphone_18_eszney.png' },
-  { id: 'refurb-19', name: 'Refurbished iPhone 19', description: 'Modern refurbished model.', monthlyCost: 68.50, emoji: '🍎', image: 'https://res.cloudinary.com/dgmjfix9t/image/upload/v1774632708/iphone_19_z7no8v.png' },
-  { id: 'refurb-20', name: 'Refurbished iPhone 20', description: 'High-end refurbished model.', monthlyCost: 75, emoji: '✨', image: 'https://res.cloudinary.com/dgmjfix9t/image/upload/v1774632707/iphone_20_ttm5mp.png' },
-  { id: 'new-21', name: 'New iPhone 21', description: 'The future is here.', monthlyCost: 66.62, emoji: '🚀', image: 'https://res.cloudinary.com/dgmjfix9t/image/upload/v1774632707/iphone_21_a4f7jd.png' },
+  { id: 'keep-phone', name: 'Keep current phone', description: 'My iPhone 17 Pro works fine. I will save my money.', monthlyCost: 0, emoji: '📱', image: 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&q=80&w=800' },
+  { id: 'refurb-18', name: 'iPhone 18', description: 'Original: $1,240', monthlyCost: 1240 / 12, emoji: '🍏', image: 'https://res.cloudinary.com/dgmjfix9t/image/upload/v1774632707/iphone_18_eszney.png' },
+  { id: 'refurb-19', name: 'iPhone 19', description: 'Refurbished Price: $822', monthlyCost: 822 / 12, emoji: '🍎', image: 'https://res.cloudinary.com/dgmjfix9t/image/upload/v1774632708/iphone_19_z7no8v.png' },
+  { id: 'refurb-20', name: 'iPhone 20', description: 'Refurbished Price: $900', monthlyCost: 900 / 12, emoji: '✨', image: 'https://res.cloudinary.com/dgmjfix9t/image/upload/v1774632707/iphone_20_ttm5mp.png' },
+  { id: 'new-21-256', name: 'iPhone 21 (256GB)', description: '$1,399 Retail', monthlyCost: 1399 / 24, emoji: '🚀', image: 'https://res.cloudinary.com/dgmjfix9t/image/upload/v1774632707/iphone_21_a4f7jd.png' },
+  { id: 'new-21-512', name: 'iPhone 21 (512GB)', description: '$1,599 Retail', monthlyCost: 1599 / 24, emoji: '📸', image: 'https://res.cloudinary.com/dgmjfix9t/image/upload/v1774632707/iphone_21_a4f7jd.png' },
+  { id: 'new-21-1tb', name: 'iPhone 21 (1TB)', description: '$1,799 Retail', monthlyCost: 1799 / 36, emoji: '🎥', image: 'https://res.cloudinary.com/dgmjfix9t/image/upload/v1774632707/iphone_21_a4f7jd.png' },
+  { id: 'new-21-2tb', name: 'iPhone 21 (2TB)', description: '$2,199 Retail', monthlyCost: 2199 / 36, emoji: '🌌', image: 'https://res.cloudinary.com/dgmjfix9t/image/upload/v1774632707/iphone_21_a4f7jd.png' },
 ];
 
 export const PHONE_PLAN_OPTIONS: Option[] = [
-  { id: 'att', name: 'AT&T Unlimited Extra EL', description: 'Unlimited data with priority.', monthlyCost: 75, emoji: '📶', image: 'https://res.cloudinary.com/dgmjfix9t/image/upload/v1774633194/1_gklwkh.png' },
-  { id: 'cricket', name: 'Cricket Unlimited', description: 'Taxes usually included.', monthlyCost: 60, emoji: '🦗', image: 'https://res.cloudinary.com/dgmjfix9t/image/upload/v1774633194/2_chhiwr.png' },
-  { id: 'verizon', name: 'Verizon Unlimited Plus', description: 'Strong rural coverage.', monthlyCost: 80, emoji: '📡', image: 'https://res.cloudinary.com/dgmjfix9t/image/upload/v1774633195/3_rsxvo3.png' },
-  { id: 'visible', name: 'Visible+', description: 'Best value on Verizon network.', monthlyCost: 45, emoji: '👁️', image: 'https://res.cloudinary.com/dgmjfix9t/image/upload/v1774633194/4_oo3iad.png' },
-  { id: 'tmobile', name: 'T-Mobile Go5G Plus', description: 'Best perks and fastest 5G.', monthlyCost: 75, emoji: '💗', image: 'https://res.cloudinary.com/dgmjfix9t/image/upload/v1774633194/5_n00qn3.png' },
-  { id: 'metro', name: 'Metro Unlimited', description: 'Great for families & prepaid.', monthlyCost: 60, emoji: '🚇', image: 'https://res.cloudinary.com/dgmjfix9t/image/upload/v1774633194/6_dgwvq5.png' },
+  {
+    id: 'att',
+    name: 'AT&T',
+    description: 'Unlimited data with priority.',
+    monthlyCost: 75,
+    image: 'https://upload.wikimedia.org/wikipedia/commons/b/b1/AT%26T_logo_2016.svg',
+    planName: 'Unlimited Extra EL',
+    data: 'Unlimited (priority data)',
+    hotspot: '30 GB',
+    access: '5G or 5G+',
+    notes: 'Solid international roaming add-ons'
+  },
+  {
+    id: 'cricket',
+    name: 'Cricket Wireless',
+    description: 'Taxes usually included.',
+    monthlyCost: 60,
+    image: 'https://upload.wikimedia.org/wikipedia/commons/e/e0/Cricket_Wireless_logo.svg',
+    planName: 'Unlimited + 15GB Hotspot',
+    data: 'Unlimited (throttled after threshold)',
+    hotspot: '15 GB',
+    access: '5G',
+    notes: 'Taxes usually included'
+  },
+  {
+    id: 'verizon',
+    name: 'Verizon',
+    description: 'Strong rural coverage.',
+    monthlyCost: 80,
+    image: 'https://upload.wikimedia.org/wikipedia/commons/0/03/Verizon_2015_logo.svg',
+    planName: 'Unlimited Plus',
+    data: 'Unlimited (premium data)',
+    hotspot: '30 GB',
+    access: '5G Nationwide + Ultra Wideband',
+    notes: 'Strong rural coverage'
+  },
+  {
+    id: 'visible',
+    name: 'Visible',
+    description: 'Best value on Verizon network.',
+    monthlyCost: 45,
+    image: 'https://upload.wikimedia.org/wikipedia/commons/d/df/Visible_logo.svg',
+    planName: 'Visible+',
+    data: 'Unlimited (priority capped)',
+    hotspot: 'Unlimited (5 Mbps)',
+    access: '5G UW',
+    notes: 'Best value on Verizon network'
+  },
+  {
+    id: 'tmobile',
+    name: 'T-Mobile',
+    description: 'Best perks and fastest 5G.',
+    monthlyCost: 75,
+    image: 'https://upload.wikimedia.org/wikipedia/commons/d/d1/T-Mobile_logo_2022.svg',
+    planName: 'Go5G Plus',
+    data: 'Unlimited (no deprioritization)',
+    hotspot: '50 GB',
+    access: '5G Ultra Capacity',
+    notes: 'Best perks & fastest 5G'
+  },
+  {
+    id: 'metro',
+    name: 'Metro by T-Mobile',
+    description: 'Great for families & prepaid.',
+    monthlyCost: 60,
+    image: 'https://upload.wikimedia.org/wikipedia/commons/8/8e/Metro_by_T-Mobile_logo.svg',
+    planName: 'Unlimited + 25GB Hotspot',
+    data: 'Unlimited (may deprioritize)',
+    hotspot: '25 GB',
+    access: '5G',
+    notes: 'Great for families & prepaid'
+  },
 ];
 
 export const INTERNET_OPTIONS: Option[] = [
@@ -148,10 +231,44 @@ export const SUBSCRIPTION_OPTIONS: Option[] = [
 ];
 
 export const FOOD_OPTIONS: Option[] = [
-  { id: 'budget-cook', name: 'Budget Cook', description: 'Mostly home-cooked, basic ingredients.', monthlyCost: 300, emoji: '🍳', image: 'https://images.unsplash.com/photo-1547592166-23ac45744acd?auto=format&fit=crop&q=80&w=800' },
-  { id: 'standard-mix', name: 'Standard Mix', description: 'Mix of cooking and occasional takeout.', monthlyCost: 500, emoji: '🥗', image: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&q=80&w=800' },
-  { id: 'foodie', name: 'Foodie Lifestyle', description: 'Organic groceries and frequent dining out.', monthlyCost: 800, emoji: '🍱', image: 'https://images.unsplash.com/photo-1514328539067-60405177bec0?auto=format&fit=crop&q=80&w=800' },
-  { id: 'convenience', name: 'Convenience First', description: 'Meal kits and delivery services.', monthlyCost: 700, emoji: '🛵', image: 'https://images.unsplash.com/photo-1526367790999-0150786486a9?auto=format&fit=crop&q=80&w=800' },
+  {
+    id: 'food-essential-basic',
+    type: 'essential',
+    name: 'Just the Essentials',
+    weeklyPrice: 50,
+    monthlyCost: 215,
+    description: 'Basic items for one person.',
+    items: ['12 Large Eggs', '1lb Ground Meat', '1lb Chicken Breast', '9 oz Lunch Meat', '1lb White Rice', '1 Box of Cereal', '1 Loaf of Bread', '1lb of Coffee', '1 Gallon Milk', '1lb Sliced Cheese', '1 Bottle of Sauce (assorted)']
+  },
+  {
+    id: 'food-essential-plus',
+    type: 'essential',
+    name: 'A Good Amount of Stuff',
+    weeklyPrice: 100,
+    monthlyCost: 430,
+    description: 'Includes essentials plus snacks and produce.',
+    isPlus: true,
+    items: ['Fresh Fruit (Assorted)', '1 Head of Lettuce', '4 Roma Tomatoes', '1 Bag of Chips', '1 Box of Granola Bars', '1 Box of Cookies', '1 Box of Crackers', '1 Pack Hot Dog Buns', '1 Pack Hamburger Buns', '1 Pack Hot Dogs', '1 Bottle of Seasoning', '1 Additional Bottle of Sauce']
+  },
+  {
+    id: 'food-premium-basic',
+    type: 'premium',
+    name: 'All Organic/Premium Essentials',
+    weeklyPrice: 100,
+    monthlyCost: 430,
+    description: 'Higher quality basic items.',
+    items: ['12 Large Organic Eggs', '1lb Farm-Fed Ground Meat', '1lb Free-Range Chicken Breast', '9 oz Premium Lunch Meat', '1lb Organic White Rice', '1 Box of Premium Cereal', '1 Loaf of Artisan Bread', '1lb of Organic Coffee', '1 Gallon Organic Milk', '1lb Organic Sliced Cheese', '1 Premium Bottle of Sauce (assorted)']
+  },
+  {
+    id: 'food-premium-plus',
+    type: 'premium',
+    name: 'All Organic/Premium PLUS',
+    weeklyPrice: 200,
+    monthlyCost: 860,
+    description: 'The best quality items including snacks.',
+    isPlus: true,
+    items: ['Organic Fresh Fruit (Assorted)', '1 Organic Head of Lettuce', '4 Organic Roma Tomatoes', '1 Bag of Premium Chips', '1 Box of Artisanal Granola Bars', '1 Box of Gourmet Cookies', '1 Box of Organic Crackers', '1 Pack Artisan Hot Dog Buns', '1 Pack Artisan Hamburger Buns', '1 Pack Organic Hot Dogs', '1 Bottle of Premium Seasoning', '1 Additional Bottle of Premium Sauce']
+  }
 ];
 
 export const TRANSPORT_OPTIONS: Option[] = [
@@ -213,3 +330,4 @@ export const OTHER_OPTIONS: Option[] = [
   { id: 'rangers', name: 'Texas Rangers Tickets', description: '8 tickets a year.', monthlyCost: 28, emoji: '⚾', image: 'https://images.unsplash.com/photo-1508344928928-7165b67de128?auto=format&fit=crop&q=80&w=800' },
   { id: 'fwssr', name: 'FWSSR', description: 'Annual visit.', monthlyCost: 8.33, emoji: '🐂', image: 'https://images.unsplash.com/photo-1534073133331-c4b62a557083?auto=format&fit=crop&q=80&w=800' },
 ];
+

@@ -12,15 +12,18 @@
   },
   "dependencies": {
     "@google/genai": "^1.29.0",
+    "@supabase/auth-ui-react": "^0.4.7",
+    "@supabase/auth-ui-shared": "^0.1.8",
     "@supabase/supabase-js": "^2.100.1",
     "@tailwindcss/vite": "^4.1.14",
     "@vitejs/plugin-react": "^5.0.4",
     "dotenv": "^17.2.3",
     "express": "^4.21.2",
+    "html2canvas": "^1.4.1",
     "lucide-react": "^0.546.0",
     "motion": "^12.23.24",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
     "recharts": "^3.8.1",
     "vite": "^6.2.0"
   },
@@ -32,5 +35,11 @@
     "tsx": "^4.21.0",
     "typescript": "~5.8.2",
     "vite": "^6.2.0"
+  },
+  "overrides": {
+    "@supabase/auth-ui-react": {
+      "react": "19.2.4",
+      "react-dom": "19.2.4"
+    }
   }
 }
