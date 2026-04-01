@@ -232,44 +232,155 @@ export const SUBSCRIPTION_OPTIONS: Option[] = [
 
 export const FOOD_OPTIONS: Option[] = [
   {
-    id: 'food-essential-basic',
+    id: 'food-bare-minimum',
     type: 'essential',
-    name: 'Just the Essentials',
-    weeklyPrice: 50,
-    monthlyCost: 215,
-    description: 'Basic items for one person.',
-    items: ['12 Large Eggs', '1lb Ground Meat', '1lb Chicken Breast', '9 oz Lunch Meat', '1lb White Rice', '1 Box of Cereal', '1 Loaf of Bread', '1lb of Coffee', '1 Gallon Milk', '1lb Sliced Cheese', '1 Bottle of Sauce (assorted)']
+    name: 'Bare Minimum',
+    weeklyPrice: 35,
+    monthlyCost: 152,
+    description: 'Cheapest store brand items only. No snacks, no extras.',
+    items: [
+      'Smart Way White Bread ($1.49)',
+      'Great Value Large Eggs 12ct ($1.97)',
+      'Kroger Instant White Rice ($1.89)',
+      'Smart Way Ketchup ($0.99)',
+      'Classic Franks Hot Dogs ($1.25)',
+      'Great Value Creamy Peanut Butter ($1.98)',
+      'Springdale Vitamin D Whole Milk ($2.59)',
+      'Great Value American Cheese Slices ($2.48)',
+      'Kroger Crispy Rice Cereal ($2.29)',
+      'Smart Way Mayonnaise ($2.19)',
+      'Store brand produce (lettuce, tomatoes, oranges)',
+    ]
   },
   {
-    id: 'food-essential-plus',
+    id: 'food-smart-shopper',
     type: 'essential',
-    name: 'A Good Amount of Stuff',
+    name: 'Smart Shopper',
+    weeklyPrice: 60,
+    monthlyCost: 260,
+    description: 'Store brand basics across the board. Covers all essentials comfortably.',
+    recommended: true,
+    items: [
+      'Kroger Vitamin D Whole Milk ($2.89)',
+      'Kroger Grade A Large Eggs 12ct ($2.09)',
+      'Kroger Classic White Bread ($1.99)',
+      'Kroger Creamy Peanut Butter ($2.29)',
+      'Kroger Turkey Breast Thin Sliced ($4.49)',
+      'Kroger 80/20 Ground Beef 1lb ($7.29)',
+      'Store brand fresh produce & fruit',
+      'Kroger Chewy Granola Bars ($4.29)',
+      'Kroger Original Potato Chips ($1.99)',
+      'Kroger Ketchup, Mustard & Mayo',
+    ]
+  },
+  {
+    id: 'food-everyday-comfortable',
+    type: 'premium',
+    name: 'Everyday Comfortable',
     weeklyPrice: 100,
     monthlyCost: 430,
-    description: 'Includes essentials plus snacks and produce.',
-    isPlus: true,
-    items: ['Fresh Fruit (Assorted)', '1 Head of Lettuce', '4 Roma Tomatoes', '1 Bag of Chips', '1 Box of Granola Bars', '1 Box of Cookies', '1 Box of Crackers', '1 Pack Hot Dog Buns', '1 Pack Hamburger Buns', '1 Pack Hot Dogs', '1 Bottle of Seasoning', '1 Additional Bottle of Sauce']
+    description: 'Name brands, produce, snacks, and variety.',
+    items: [
+      'Tyson Boneless Skinless Chicken Breasts (~$8.21)',
+      "Lay's Classic Potato Chips ($3.99)",
+      "Hellmann's Real Mayo ($4.49)",
+      'Fresh fruit & vegetables (assorted)',
+      'Quaker Chewy Granola Bars ($5.99)',
+      'Sargento Medium Cheddar Sliced Cheese ($3.69)',
+      'Borden Whole Vitamin D Milk ($5.99)',
+      'Jif Creamy Peanut Butter ($3.29)',
+      'Heinz Ketchup ($3.99)',
+      "Oscar Mayer Classic Wieners ($3.28)",
+      "Kellogg's Honey Nut Cheerios ($3.49)",
+    ]
   },
   {
-    id: 'food-premium-basic',
+    id: 'food-premium-organic',
     type: 'premium',
-    name: 'All Organic/Premium Essentials',
-    weeklyPrice: 100,
-    monthlyCost: 430,
-    description: 'Higher quality basic items.',
-    items: ['12 Large Organic Eggs', '1lb Farm-Fed Ground Meat', '1lb Free-Range Chicken Breast', '9 oz Premium Lunch Meat', '1lb Organic White Rice', '1 Box of Premium Cereal', '1 Loaf of Artisan Bread', '1lb of Organic Coffee', '1 Gallon Organic Milk', '1lb Organic Sliced Cheese', '1 Premium Bottle of Sauce (assorted)']
-  },
-  {
-    id: 'food-premium-plus',
-    type: 'premium',
-    name: 'All Organic/Premium PLUS',
-    weeklyPrice: 200,
-    monthlyCost: 860,
-    description: 'The best quality items including snacks.',
-    isPlus: true,
-    items: ['Organic Fresh Fruit (Assorted)', '1 Organic Head of Lettuce', '4 Organic Roma Tomatoes', '1 Bag of Premium Chips', '1 Box of Artisanal Granola Bars', '1 Box of Gourmet Cookies', '1 Box of Organic Crackers', '1 Pack Artisan Hot Dog Buns', '1 Pack Artisan Hamburger Buns', '1 Pack Organic Hot Dogs', '1 Bottle of Premium Seasoning', '1 Additional Bottle of Premium Sauce']
+    name: 'Premium / Organic',
+    weeklyPrice: 175,
+    monthlyCost: 756,
+    description: 'Organic and premium items across all categories including snacks.',
+    items: [
+      "Simple Truth Organic Chicken Breasts ($12.14)",
+      "Dave's Killer Bread 21 Whole Grains ($6.99)",
+      'Vital Farms Pasture-Raised Eggs 12ct ($7.69)',
+      'Horizon Organic Whole Milk Gallon ($10.99)',
+      'Simple Truth Organic Peanut Butter ($4.99)',
+      'Organic fresh fruit & vegetables',
+      'KIND Almond & Coconut Bars 12ct ($13.18)',
+      'Applegate Organic Uncured Beef Hot Dogs ($7.49)',
+      "Wellshire Uncured Black Forest Ham ($7.99)",
+      'Primal Kitchen Organic Ketchup ($9.49)',
+      'Simple Truth Organic Romaine Hearts ($3.99)',
+    ]
   }
 ];
+
+export const FOOD_STORE_COMPARISONS: Record<string, {
+  items: { category: string; walmart: number | null; kroger: number | null; target: number | null }[];
+}> = {
+  'food-bare-minimum': {
+    items: [
+      { category: 'Eggs, 12ct', walmart: 1.97, kroger: 2.09, target: null },
+      { category: 'Whole Milk, 1 gal', walmart: 3.64, kroger: 2.59, target: 2.49 },
+      { category: 'White Bread', walmart: 1.48, kroger: 1.49, target: 1.39 },
+      { category: 'Peanut Butter', walmart: 1.98, kroger: 2.29, target: 2.29 },
+      { category: 'Grape Jelly', walmart: 1.98, kroger: 1.99, target: 1.99 },
+      { category: 'Ketchup', walmart: 1.97, kroger: 0.99, target: 3.19 },
+      { category: 'Protein (meat)', walmart: 6.44, kroger: 1.25, target: 3.49 },
+      { category: 'White Rice', walmart: 1.77, kroger: 1.89, target: 1.89 },
+      { category: 'Iceberg Lettuce', walmart: 1.74, kroger: 1.99, target: 1.99 },
+      { category: 'Roma Tomatoes (4)', walmart: 0.92, kroger: 0.30, target: 1.16 },
+      { category: 'Granola Bars', walmart: 4.42, kroger: 4.29, target: 3.99 },
+    ],
+  },
+  'food-smart-shopper': {
+    items: [
+      { category: 'Eggs, 12ct', walmart: 1.97, kroger: 2.09, target: 2.29 },
+      { category: 'Whole Milk, 1 gal', walmart: 3.64, kroger: 2.89, target: 2.49 },
+      { category: 'White Bread', walmart: 1.48, kroger: 1.99, target: 1.39 },
+      { category: 'Ground Beef, 1lb', walmart: 6.44, kroger: 7.29, target: 7.19 },
+      { category: 'Deli Turkey', walmart: 5.97, kroger: 4.49, target: 3.59 },
+      { category: 'Peanut Butter', walmart: 1.98, kroger: 2.29, target: 2.29 },
+      { category: 'Grape Jelly', walmart: 1.98, kroger: 1.99, target: 1.99 },
+      { category: 'Cheese Slices', walmart: 2.48, kroger: 2.49, target: 1.69 },
+      { category: 'Strawberries, 1lb', walmart: 2.66, kroger: null, target: 3.39 },
+      { category: 'Potato Chips', walmart: 2.96, kroger: 1.99, target: 2.49 },
+      { category: 'Granola Bars', walmart: 4.42, kroger: 4.29, target: 3.99 },
+    ],
+  },
+  'food-everyday-comfortable': {
+    items: [
+      { category: "Eggs (Eggland's Best)", walmart: null, kroger: 3.69, target: null },
+      { category: 'Whole Milk (Borden)', walmart: null, kroger: 5.99, target: null },
+      { category: 'Chicken Breast, ~1.5lb', walmart: 8.21, kroger: 9.48, target: null },
+      { category: 'Ground Beef, 1lb', walmart: 6.44, kroger: 8.49, target: 7.19 },
+      { category: 'Deli Lunch Meat', walmart: null, kroger: 4.99, target: null },
+      { category: 'Sargento Cheese', walmart: 7.12, kroger: 3.69, target: null },
+      { category: 'Jif Peanut Butter', walmart: null, kroger: 3.29, target: null },
+      { category: "Smucker's Jelly", walmart: null, kroger: 3.69, target: null },
+      { category: "Lay's Chips", walmart: 5.44, kroger: 3.99, target: null },
+      { category: 'Oreos Family Size', walmart: 4.97, kroger: 5.29, target: null },
+      { category: 'Name Brand Cereal', walmart: 4.98, kroger: 3.99, target: 3.49 },
+    ],
+  },
+  'food-premium-organic': {
+    items: [
+      { category: 'Organic Eggs, 12ct', walmart: 5.96, kroger: 4.99, target: 7.69 },
+      { category: 'Organic Whole Milk', walmart: null, kroger: 10.99, target: 6.99 },
+      { category: 'Organic Chicken, 1lb', walmart: 9.94, kroger: 12.14, target: 16.0 },
+      { category: 'Organic Peanut Butter', walmart: 7.72, kroger: 4.99, target: null },
+      { category: 'Organic Fruit Spread', walmart: 6.97, kroger: 4.29, target: 6.19 },
+      { category: "Dave's Killer Bread", walmart: 6.42, kroger: 6.99, target: 5.99 },
+      { category: 'Organic Romaine Hearts', walmart: 4.36, kroger: 3.99, target: 3.49 },
+      { category: 'Organic Strawberries', walmart: 5.12, kroger: null, target: null },
+      { category: 'Organic Honeycrisp 2lb', walmart: null, kroger: 5.99, target: 5.89 },
+      { category: 'Premium Snack Bars', walmart: 13.18, kroger: null, target: 7.59 },
+      { category: 'Organic Ketchup', walmart: null, kroger: 9.49, target: 8.29 },
+    ],
+  },
+};
 
 export const TRANSPORT_OPTIONS: Option[] = [
   { id: 'borrow', name: 'Borrow a vehicle', description: 'Borrow from family or friend.', monthlyCost: 0, emoji: '🤝', category: 'Other', image: 'https://images.unsplash.com/photo-1494976388531-d1058494cdd8?auto=format&fit=crop&q=80&w=800' },

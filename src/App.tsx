@@ -14,7 +14,7 @@ import {
   Camera, MessageSquare, History, X,
   PieChart as PieChartIcon 
 } from 'lucide-react';
-import { REGIONS, HOUSING_OPTIONS, PHONE_OPTIONS, PHONE_SUB_OPTIONS, PHONE_PLAN_OPTIONS, INTERNET_OPTIONS, UTILITY_OPTIONS, STREAMING_OPTIONS, SUBSCRIPTION_OPTIONS, FOOD_OPTIONS, TRANSPORT_OPTIONS, CLOTHING_OPTIONS, INSURANCE_OPTIONS, OTHER_OPTIONS } from './data/texasData';
+import { REGIONS, HOUSING_OPTIONS, PHONE_OPTIONS, PHONE_SUB_OPTIONS, PHONE_PLAN_OPTIONS, INTERNET_OPTIONS, UTILITY_OPTIONS, STREAMING_OPTIONS, SUBSCRIPTION_OPTIONS, FOOD_OPTIONS, FOOD_STORE_COMPARISONS, TRANSPORT_OPTIONS, CLOTHING_OPTIONS, INSURANCE_OPTIONS, OTHER_OPTIONS } from './data/texasData';
 import { QuizState, STEPS, Option } from './types';
 import { supabase } from './lib/supabase';
 import { getCareerSuggestions, CareerSuggestion } from './services/gemini';
@@ -1338,6 +1338,12 @@ function FoodSelectionStep({ options, category, state, onSelect, multiplier = 1 
   const selectedId = state.selections[category];
   const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
 
+  const STORE_LOGOS = {
+    walmart: 'https://tclrzjhxongpnlyxdpcz.supabase.co/storage/v1/object/public/Grocery%20Stores/1.png',
+    target: 'https://tclrzjhxongpnlyxdpcz.supabase.co/storage/v1/object/public/Grocery%20Stores/2.png',
+    kroger: 'https://tclrzjhxongpnlyxdpcz.supabase.co/storage/v1/object/public/Grocery%20Stores/3.png',
+  };
+
   const renderSection = (type: 'essential' | 'premium', title: string, logos: string[]) => (
     <div className="relative border-b border-slate-100 last:border-0 py-10 first:pt-4 pl-12 md:pl-16">
       <div className="absolute left-0 top-0 bottom-0 w-12 md:w-16 flex items-center justify-center">
@@ -1360,24 +1366,31 @@ function FoodSelectionStep({ options, category, state, onSelect, multiplier = 1 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {options.filter((o: any) => o.type === type).map((opt: any) => {
             const isSelected = selectedId === opt.id;
+            const comparison = FOOD_STORE_COMPARISONS[opt.id];
             return (
               <div key={opt.id} className="relative">
                 <button
                   onClick={() => onSelect(category, opt.id)}
                   className={`w-full flex flex-col items-center text-center p-6 transition-all border-2 rounded-3xl relative group ${
-                    isSelected 
-                      ? 'border-[#10B981] ring-2 ring-emerald-50 bg-emerald-50/10' 
+                    isSelected
+                      ? 'border-[#10B981] ring-2 ring-emerald-50 bg-emerald-50/10'
                       : 'border-slate-100 hover:border-slate-200 bg-white shadow-sm'
                   }`}
                 >
-                  <div className="text-[#3372B2] font-black text-2xl mb-1">
+                  {opt.recommended && (
+                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#2B5FA3] text-white text-[11px] font-bold px-3 py-1 rounded-full whitespace-nowrap">
+                      Most realistic for students
+                    </div>
+                  )}
+
+                  <div className="text-[#3372B2] font-black text-2xl mb-1 mt-2">
                     ~${((opt.weeklyPrice ?? 0) * multiplier).toLocaleString()}/Week
                   </div>
                   <div className="text-[#3372B2] font-bold text-lg mb-4 leading-tight">{opt.name}</div>
-                  
+
                   <p className="text-slate-500 text-sm mb-6 min-h-[40px]">{opt.description}</p>
-                  
-                  <div 
+
+                  <div
                     onClick={(e) => { e.stopPropagation(); setActiveTooltip(opt.id); }}
                     className="p-2 text-[#3372B2] hover:text-[#2D9B8E] transition-colors flex items-center gap-2 text-sm font-bold cursor-pointer"
                   >
@@ -1394,7 +1407,7 @@ function FoodSelectionStep({ options, category, state, onSelect, multiplier = 1 
 
                 <AnimatePresence>
                   {activeTooltip === opt.id && (
-                    <motion.div 
+                    <motion.div
                       initial={{ opacity: 0, scale: 0.9, y: 10 }}
                       animate={{ opacity: 1, scale: 1, y: 0 }}
                       exit={{ opacity: 0, scale: 0.9, y: 10 }}
@@ -1402,7 +1415,7 @@ function FoodSelectionStep({ options, category, state, onSelect, multiplier = 1 
                     >
                       <button onClick={() => setActiveTooltip(null)} className="absolute top-2 right-2 text-slate-400 p-2">✕</button>
                       <p className="text-[#3372B2] font-bold mb-3 text-sm pr-6">
-                        {opt.isPlus ? "*Everything from just the essentials PLUS:" : "This package includes things such as:"}
+                        This package includes things such as:
                       </p>
                       <ul className="grid grid-cols-1 gap-1">
                         {opt.items?.map((item: string, i: number) => (
@@ -1425,20 +1438,32 @@ function FoodSelectionStep({ options, category, state, onSelect, multiplier = 1 
 
   return (
     <div className="space-y-4">
-      {renderSection('essential', 'Essential Shopping', [
+      {renderSection('essential', 'Budget Stores', [
         'https://tclrzjhxongpnlyxdpcz.supabase.co/storage/v1/object/public/Grocery%20Stores/1.png',
         'https://tclrzjhxongpnlyxdpcz.supabase.co/storage/v1/object/public/Grocery%20Stores/2.png',
         'https://tclrzjhxongpnlyxdpcz.supabase.co/storage/v1/object/public/Grocery%20Stores/3.png',
-        'https://tclrzjhxongpnlyxdpcz.supabase.co/storage/v1/object/public/Grocery%20Stores/4.png'
+        'https://tclrzjhxongpnlyxdpcz.supabase.co/storage/v1/object/public/Grocery%20Stores/4.png',
       ])}
+
       <div className="h-px bg-slate-100 my-4" />
-      {renderSection('premium', 'Premium Shopping', [
+
+      {renderSection('premium', 'All Stores', [
+        'https://tclrzjhxongpnlyxdpcz.supabase.co/storage/v1/object/public/Grocery%20Stores/1.png',
+        'https://tclrzjhxongpnlyxdpcz.supabase.co/storage/v1/object/public/Grocery%20Stores/2.png',
+        'https://tclrzjhxongpnlyxdpcz.supabase.co/storage/v1/object/public/Grocery%20Stores/3.png',
+        'https://tclrzjhxongpnlyxdpcz.supabase.co/storage/v1/object/public/Grocery%20Stores/4.png',
         'https://tclrzjhxongpnlyxdpcz.supabase.co/storage/v1/object/public/Grocery%20Stores/5.png',
         'https://tclrzjhxongpnlyxdpcz.supabase.co/storage/v1/object/public/Grocery%20Stores/6.png',
-        'https://tclrzjhxongpnlyxdpcz.supabase.co/storage/v1/object/public/Grocery%20Stores/7.png'
+        'https://tclrzjhxongpnlyxdpcz.supabase.co/storage/v1/object/public/Grocery%20Stores/7.png',
       ])}
-      
-      {/* Background overlay to close tooltips */}
+
+      <div className="mx-2 mt-2 p-4 bg-amber-50 border border-amber-200 rounded-2xl flex items-start gap-3">
+        <span className="text-amber-500 text-lg mt-0.5">⚠</span>
+        <p className="text-amber-800 text-sm font-medium leading-relaxed">
+          <span className="font-bold">Need allergen-free options?</span> Items like lactose-free milk can cost $10-20 more per week in any tier.
+        </p>
+      </div>
+
       {activeTooltip && (
         <div className="fixed inset-0 z-[105]" onClick={() => setActiveTooltip(null)} />
       )}

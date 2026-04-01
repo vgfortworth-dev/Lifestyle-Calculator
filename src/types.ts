@@ -13,6 +13,7 @@ export type Option = {
   description: string;
   monthlyCost: number;
   weeklyPrice?: number;
+  recommended?: boolean;
   emoji?: string;
   image?: string;
   category?: string;
