@@ -19,6 +19,8 @@ import { QuizState, STEPS, Option } from './types';
 import { supabase } from './lib/supabase';
 import { getCareerSuggestions, CareerSuggestion } from './services/gemini';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
+import { useCalculatorData } from './hooks/useCalculatorData';
+import AdminPage from './pages/AdminPage';
 
 const INITIAL_STATE: QuizState = {
   currentStep: 0,
@@ -88,11 +90,30 @@ const INTEREST_RATES = {
   'used-ev': 11.5
 } as const;
 
+const USE_SUPABASE = true;
+
 function calculateTransportMonthly(price: number, annualRate: number) {
   if (price === 0) return 0;
   const r = annualRate / 100 / 12;
   const n = 60;
   return (price * r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1);
+}
+
+function getTransportRateKey(category?: string) {
+  if (category === 'new' || category === 'used') return category;
+  if (category === 'new_ev') return 'new-ev';
+  if (category === 'used_ev') return 'used-ev';
+  return null;
+}
+
+function getTransportMonthlyCost(opt: any) {
+  if (!opt) return 0;
+  if (typeof opt.monthlyCost === 'number') return opt.monthlyCost;
+
+  const rateKey = getTransportRateKey(opt.category);
+  if (!rateKey || typeof opt.price !== 'number') return 0;
+
+  return calculateTransportMonthly(opt.price, INTEREST_RATES[rateKey]);
 }
 
 function getTransportationOption(id: string): Option | undefined {
@@ -121,6 +142,20 @@ function getTransportationOption(id: string): Option | undefined {
 export default function App() {
   const [session, setSession] = useState<any>(null);
   const [showHistory, setShowHistory] = useState(false);
+  const {
+    regions,
+    internetOptions,
+    utilityOptions,
+    streamingOptions,
+    subscriptionOptions,
+    clothingOptions,
+    insuranceOptions,
+    phonePlanOptions,
+    phoneDeviceOptions,
+    transportOptions,
+    loading: calculatorDataLoading,
+    error: calculatorDataError
+  } = useCalculatorData();
   const [state, setState] = useState<QuizState>(() => {
     const saved = localStorage.getItem('lifestyle_calculator_state');
     if (!saved) return INITIAL_STATE;
@@ -140,6 +175,25 @@ export default function App() {
     }
     return parsed;
   });
+
+  // Region-based data
+  const activeRegions = USE_SUPABASE && regions.length ? regions : REGIONS;
+  const activeInternetOptions = USE_SUPABASE && internetOptions.length ? internetOptions : INTERNET_OPTIONS;
+  const activeUtilityOptions = USE_SUPABASE && utilityOptions.length ? utilityOptions : UTILITY_OPTIONS;
+
+  // Global data
+  const activeStreamingOptions = USE_SUPABASE && streamingOptions.length ? streamingOptions : STREAMING_OPTIONS;
+  const activeSubscriptionOptions = USE_SUPABASE && subscriptionOptions.length ? subscriptionOptions : SUBSCRIPTION_OPTIONS;
+  const activeClothingOptions = USE_SUPABASE && clothingOptions.length ? clothingOptions : CLOTHING_OPTIONS;
+  const activeInsuranceOptions = USE_SUPABASE && insuranceOptions.length ? insuranceOptions : INSURANCE_OPTIONS;
+  const activePhonePlanOptions = USE_SUPABASE && phonePlanOptions.length ? phonePlanOptions : PHONE_PLAN_OPTIONS;
+  const activeTransportOptions = transportOptions.length ? transportOptions : TRANSPORT_OPTIONS;
+  const activePhoneDeviceOptions = USE_SUPABASE && phoneDeviceOptions.length
+    ? phoneDeviceOptions
+    : [
+        ...PHONE_SUB_OPTIONS.refurbished.map(p => ({ ...p, category: 'refurbished' })),
+        ...PHONE_SUB_OPTIONS.new.map(p => ({ ...p, category: 'new' }))
+      ];
 
   useEffect(() => {
     localStorage.setItem('lifestyle_calculator_state', JSON.stringify(state));
@@ -162,9 +216,9 @@ export default function App() {
     return () => subscription.unsubscribe();
   }, []);
 
-  const currentRegion = useMemo(() => 
-    REGIONS.find(r => r.id === state.regionId) || REGIONS[5], 
-  [state.regionId]);
+  const currentRegion = useMemo(() =>
+    activeRegions.find((r: any) => r.id === state.regionId) || activeRegions[0],
+  [state.regionId, activeRegions]);
 
   const calculateMonthlyTotal = () => {
     let total = 0;
@@ -179,28 +233,28 @@ export default function App() {
     if (phone) total += phone.monthlyCost;
 
     // Phone Plan
-    const phonePlan = PHONE_PLAN_OPTIONS.find(o => o.id === state.selections.phonePlan);
+    const phonePlan = activePhonePlanOptions.find((o: any) => o.id === state.selections.phonePlan);
     if (phonePlan) total += phonePlan.monthlyCost;
 
     // Internet
-    const internet = INTERNET_OPTIONS.find(o => o.id === state.selections.internet);
+    const internet = activeInternetOptions.find((o: any) => o.id === state.selections.internet);
     if (internet) total += internet.monthlyCost;
 
     // Utilities
     state.selections.utilities.forEach(id => {
-      const opt = UTILITY_OPTIONS.find(o => o.id === id);
+      const opt = activeUtilityOptions.find((o: any) => o.id === id);
       if (opt) total += opt.monthlyCost * multiplier;
     });
 
     // Streaming
     state.selections.streaming.forEach(id => {
-      const opt = STREAMING_OPTIONS.find(o => o.id === id);
+      const opt = activeStreamingOptions.find((o: any) => o.id === id);
       if (opt) total += opt.monthlyCost;
     });
 
     // Subscriptions
     state.selections.subscriptions.forEach(id => {
-      const opt = SUBSCRIPTION_OPTIONS.find(o => o.id === id);
+      const opt = activeSubscriptionOptions.find((o: any) => o.id === id);
       if (opt) total += opt.monthlyCost;
     });
 
@@ -210,17 +264,17 @@ export default function App() {
 
     // Transportation
     state.selections.transportation.forEach(id => {
-      const opt = getTransportationOption(id) || TRANSPORT_OPTIONS.find(o => o.id === id);
-      if (opt) total += opt.monthlyCost;
+      const opt = activeTransportOptions.find((o: any) => o.id === id) || getTransportationOption(id);
+      total += getTransportMonthlyCost(opt);
     });
 
     // Clothing
-    const clothing = CLOTHING_OPTIONS.find(o => o.id === state.selections.clothing);
+    const clothing = activeClothingOptions.find((o: any) => o.id === state.selections.clothing);
     if (clothing) total += clothing.monthlyCost;
 
     // Insurance
     state.selections.insurance.forEach(id => {
-      const opt = INSURANCE_OPTIONS.find(o => o.id === id);
+      const opt = activeInsuranceOptions.find((o: any) => o.id === id);
       if (opt) total += opt.monthlyCost * multiplier;
     });
 
@@ -336,7 +390,9 @@ export default function App() {
         return (
           <QuizWrapper title="Where Will You Live?" description="Prices change depending on where you are in Texas!">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {REGIONS.map(region => (
+              {[...activeRegions]
+                .sort((a, b) => a.majorCity.localeCompare(b.majorCity))
+                .map(region => (
                 <button
                   key={region.id}
                   onClick={() => {
@@ -388,6 +444,7 @@ export default function App() {
               state={state}
               onSelect={handleSelection}
               onNext={nextStep}
+              deviceOptions={activePhoneDeviceOptions}
             />
           </QuizWrapper>
         );
@@ -396,7 +453,7 @@ export default function App() {
         return (
           <QuizWrapper title="Choose Your Phone Plan">
             <PhonePlanSelectionStep
-              options={PHONE_PLAN_OPTIONS}
+              options={activePhonePlanOptions}
               category="phonePlan"
               state={state}
               onSelect={handleSelection}
@@ -408,7 +465,7 @@ export default function App() {
         return (
           <QuizWrapper title="Choose Your Internet Plan" description="Fast speeds for gaming and streaming.">
             <SelectionStep
-              options={INTERNET_OPTIONS}
+              options={activeInternetOptions.filter((o: any) => o.region_id === state.regionId)}
               category="internet"
               state={state}
               onSelect={handleSelection}
@@ -421,7 +478,7 @@ export default function App() {
         return (
           <QuizWrapper title="Choose Your Utilities" description="Don't forget the basics! Select all that apply.">
             <MultiSelectionStep
-              options={UTILITY_OPTIONS}
+              options={activeUtilityOptions.filter((o: any) => o.region_id === state.regionId)}
               category="utilities"
               state={state}
               onToggle={toggleMultiSelection}
@@ -435,7 +492,7 @@ export default function App() {
         return (
           <QuizWrapper title="Choose Your Streaming Plans" description="What will you watch and listen to? Compare with ads and premium options.">
             <StreamingSelectionStep
-              options={STREAMING_OPTIONS}
+              options={activeStreamingOptions}
               category="streaming"
               state={state}
               onToggle={toggleMultiSelection}
@@ -448,7 +505,7 @@ export default function App() {
         return (
           <QuizWrapper title="More Subscriptions" description="Extra perks for your lifestyle.">
             <MultiSelectionStep
-              options={SUBSCRIPTION_OPTIONS}
+              options={activeSubscriptionOptions}
               category="subscriptions"
               state={state}
               onToggle={toggleMultiSelection}
@@ -476,6 +533,7 @@ export default function App() {
             <TransportationGridStep
               state={state}
               onSelect={handleSelection}
+              options={activeTransportOptions}
             />
           </QuizWrapper>
         );
@@ -484,7 +542,7 @@ export default function App() {
         return (
           <QuizWrapper title="Choose Your Clothing Package" description="What's your style budget?">
             <SelectionStep
-              options={CLOTHING_OPTIONS}
+              options={activeClothingOptions}
               category="clothing"
               state={state}
               onSelect={handleSelection}
@@ -535,7 +593,7 @@ export default function App() {
         return (
           <QuizWrapper title="Choose Your Insurance" description="Protect your future self.">
             <MultiSelectionStep
-              options={INSURANCE_OPTIONS}
+              options={activeInsuranceOptions}
               category="insurance"
               state={state}
               onToggle={toggleMultiSelection}
@@ -559,7 +617,7 @@ export default function App() {
         );
 
       case 'Results':
-        return <ResultsStep state={state} monthlyTotal={monthlyTotal} annualTotal={annualTotal} recommendedSalary={recommendedSalary} onReset={resetQuiz} userId={session?.user?.id} />;
+        return <ResultsStep state={state} monthlyTotal={monthlyTotal} annualTotal={annualTotal} recommendedSalary={recommendedSalary} onReset={resetQuiz} userId={session?.user?.id} streamingOptions={activeStreamingOptions} subscriptionOptions={activeSubscriptionOptions} clothingOptions={activeClothingOptions} insuranceOptions={activeInsuranceOptions} phonePlanOptions={activePhonePlanOptions} transportOptions={activeTransportOptions} />;
 
       default:
         return <div>Step not found</div>;
@@ -567,11 +625,23 @@ export default function App() {
   };
 
   if (!session) {
+    if (window.location.pathname === '/admin') {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6">
+          <PilotAuthGate />
+        </div>
+      );
+    }
+
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6">
         <PilotAuthGate />
       </div>
     );
+  }
+
+  if (window.location.pathname === '/admin') {
+    return <AdminPage />;
   }
 
   return (
@@ -1041,7 +1111,7 @@ function StreamingSelectionStep({ options, category, state, onToggle }: any) {
   );
 }
 
-function PhoneSelectionStep({ state, onSelect }: any) {
+function PhoneSelectionStep({ state, onSelect, deviceOptions }: any) {
   const [decision, setDecision] = useState<'none' | 'keep' | 'refurbished' | 'new'>(() => {
     const currentId = state.selections.phone;
     if (currentId === 'keep-phone') return 'keep';
@@ -1049,6 +1119,8 @@ function PhoneSelectionStep({ state, onSelect }: any) {
     if (currentId?.startsWith('new-')) return 'new';
     return 'none';
   });
+  const refurbishedOptions = deviceOptions.filter((p: any) => p.category === 'refurbished');
+  const newOptions = deviceOptions.filter((p: any) => p.category === 'new');
 
   useEffect(() => {
     const currentId = state.selections.phone;
@@ -1173,7 +1245,7 @@ function PhoneSelectionStep({ state, onSelect }: any) {
             exit={{ opacity: 0, y: -12 }}
             className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4"
           >
-            {PHONE_SUB_OPTIONS.refurbished.map(renderPhoneCard)}
+            {refurbishedOptions.map(renderPhoneCard)}
           </motion.div>
         )}
 
@@ -1185,7 +1257,7 @@ function PhoneSelectionStep({ state, onSelect }: any) {
             exit={{ opacity: 0, y: -12 }}
             className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-4"
           >
-            {PHONE_SUB_OPTIONS.new.map(renderPhoneCard)}
+            {newOptions.map(renderPhoneCard)}
           </motion.div>
         )}
       </AnimatePresence>
@@ -1211,9 +1283,11 @@ function PhonePlanSelectionStep({ options, category, state, onSelect }: any) {
                 boxShadow: isSelected ? '0 0 0 2px rgba(16, 185, 129, 0.08)' : undefined
               }}
             >
-              <div className="h-24 w-full flex items-center justify-center mb-4">
-                <img src={opt.image} alt={opt.name} className="max-h-full max-w-[80%] object-contain" referrerPolicy="no-referrer" />
-              </div>
+              {opt.image && (
+                <div className="h-24 w-full flex items-center justify-center mb-4">
+                  <img src={opt.image} alt={opt.name} className="max-h-full max-w-[80%] object-contain" referrerPolicy="no-referrer" />
+                </div>
+              )}
 
               <div className="font-black text-3xl mb-4" style={{ color: COLORS.headerBlue }}>
                 ${opt.monthlyCost}/Month
@@ -1372,9 +1446,35 @@ function FoodSelectionStep({ options, category, state, onSelect, multiplier = 1 
   );
 }
 
-function TransportationGridStep({ state, onSelect }: any) {
+function TransportationGridStep({ state, onSelect, options }: any) {
   const selectedIds = state.selections.transportation as string[];
   const [showTooltip, setShowTooltip] = useState(false);
+  const normalizeCategory = (opt: any) => {
+    if (opt.category === 'new' || opt.category === 'used' || opt.category === 'new_ev' || opt.category === 'used_ev') {
+      return opt.category;
+    }
+    if (opt.id?.includes('ev-new')) return 'new_ev';
+    if (opt.id?.includes('ev-used')) return 'used_ev';
+    if (opt.id?.includes('new_ev')) return 'new_ev';
+    if (opt.id?.includes('used_ev')) return 'used_ev';
+    if (opt.id?.endsWith('-new')) return 'new';
+    if (opt.id?.endsWith('-used')) return 'used';
+    return '';
+  };
+  const newCars = options.filter((o: any) => normalizeCategory(o) === 'new');
+  const usedCars = options.filter((o: any) => normalizeCategory(o) === 'used');
+  const newEVs = options.filter((o: any) => normalizeCategory(o) === 'new_ev');
+  const usedEVs = options.filter((o: any) => normalizeCategory(o) === 'used_ev');
+  const findOption = (rowId: string, list: any[], type: string) => {
+    const idsByType: Record<string, string[]> = {
+      new: [`${rowId}`, `${rowId}-new`],
+      used: [`${rowId}-used`],
+      'new-ev': [`${rowId}-ev-new`, `${rowId}-new-ev`, `${rowId}-new_ev`],
+      'used-ev': [`${rowId}-ev-used`, `${rowId}-used-ev`, `${rowId}-used_ev`],
+    };
+
+    return list.find((opt: any) => idsByType[type]?.includes(opt.id));
+  };
 
   const calculateMonthly = (price: number, annualRate: number) => {
     if (price === 0) return 0;
@@ -1438,10 +1538,18 @@ function TransportationGridStep({ state, onSelect }: any) {
               <span className="text-[#3372B2] font-black text-sm uppercase tracking-wide">{row.name}</span>
             </div>
 
-            {['new', 'used', 'new-ev', 'used-ev'].map(type => {
-              const opt = row.options.find(o => o.type === type);
-              return opt
-                ? renderCell(row.id, type, opt.price, (opt as any).label)
+            {[
+              { type: 'new', opt: findOption(row.id, newCars, 'new') },
+              { type: 'used', opt: findOption(row.id, usedCars, 'used') },
+              { type: 'new-ev', opt: findOption(row.id, newEVs, 'new-ev') },
+              { type: 'used-ev', opt: findOption(row.id, usedEVs, 'used-ev') },
+            ].map(({ type, opt }) => {
+              const legacyOpt = row.options.find(o => o.type === type);
+              const price = typeof opt?.price === 'number' ? Number(opt.price) : legacyOpt?.price;
+              const label = (opt as any)?.label || (legacyOpt as any)?.label;
+
+              return typeof price === 'number'
+                ? renderCell(row.id, type, price, label)
                 : <div key={type} />;
             })}
           </div>
@@ -2024,7 +2132,7 @@ function HistoryPage({ userId }: { userId: string }) {
   );
 }
 
-function ResultsStep({ state, monthlyTotal, annualTotal, recommendedSalary, onReset, userId }: any) {
+function ResultsStep({ state, monthlyTotal, annualTotal, recommendedSalary, onReset, userId, streamingOptions, subscriptionOptions, clothingOptions, insuranceOptions, phonePlanOptions, transportOptions }: any) {
   const currentRegion = REGIONS.find(r => r.id === state.regionId) || REGIONS[5];
   const [isSaving, setIsSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
@@ -2084,22 +2192,32 @@ function ResultsStep({ state, monthlyTotal, annualTotal, recommendedSalary, onRe
 
     add(HOUSING_OPTIONS.find(o => o.id === state.selections.housing), 'Housing', m);
     add(PHONE_OPTIONS.find(o => o.id === state.selections.phone), 'Phone');
-    add(PHONE_PLAN_OPTIONS.find(o => o.id === state.selections.phonePlan), 'Phone Plan');
+    add(phonePlanOptions.find((o: any) => o.id === state.selections.phonePlan), 'Phone Plan');
     add(INTERNET_OPTIONS.find(o => o.id === state.selections.internet), 'Internet');
     
     state.selections.utilities.forEach((id: string) => add(UTILITY_OPTIONS.find(o => o.id === id), 'Utilities', m));
-    state.selections.streaming.forEach((id: string) => add(STREAMING_OPTIONS.find(o => o.id === id), 'Streaming'));
-    state.selections.subscriptions.forEach((id: string) => add(SUBSCRIPTION_OPTIONS.find(o => o.id === id), 'Subscriptions'));
+    state.selections.streaming.forEach((id: string) => add(streamingOptions.find((o: any) => o.id === id), 'Streaming'));
+    state.selections.subscriptions.forEach((id: string) => add(subscriptionOptions.find((o: any) => o.id === id), 'Subscriptions'));
     
     add(FOOD_OPTIONS.find(o => o.id === state.selections.food), 'Food', m);
-    state.selections.transportation.forEach((id: string) => add(getTransportationOption(id) || TRANSPORT_OPTIONS.find(o => o.id === id), 'Transportation'));
-    add(CLOTHING_OPTIONS.find(o => o.id === state.selections.clothing), 'Clothing');
+    state.selections.transportation.forEach((id: string) => {
+      const opt = transportOptions.find((o: any) => o.id === id) || getTransportationOption(id);
+      if (opt) {
+        items.push({
+          name: opt.name,
+          cost: getTransportMonthlyCost(opt),
+          category: 'Transportation',
+          emoji: opt.emoji,
+        });
+      }
+    });
+    add(clothingOptions.find((o: any) => o.id === state.selections.clothing), 'Clothing');
     
-    state.selections.insurance.forEach((id: string) => add(INSURANCE_OPTIONS.find(o => o.id === id), 'Insurance', m));
+    state.selections.insurance.forEach((id: string) => add(insuranceOptions.find((o: any) => o.id === id), 'Insurance', m));
     state.selections.other.forEach((id: string) => add(OTHER_OPTIONS.find(o => o.id === id), 'Other'));
 
     return items;
-  }, [state.selections, currentRegion.costMultiplier]);
+  }, [state.selections, currentRegion.costMultiplier, streamingOptions, subscriptionOptions, clothingOptions, insuranceOptions, phonePlanOptions, transportOptions]);
 
   const categoryData = useMemo(() => {
     const categories: { [key: string]: number } = {};
