@@ -216,7 +216,10 @@ export const SUBSCRIPTION_OPTIONS: Option[] = [
   { id: 'figma', name: 'Figma Professional', description: 'Collaborative design.', monthlyCost: 16, emoji: '📐', category: 'Productivity', image: 'https://res.cloudinary.com/dgmjfix9t/image/upload/v1774635668/figma_gyrqes.png' },
   { id: 'icloud', name: 'iCloud+ 2TB', description: 'Apple cloud storage.', monthlyCost: 9.99, emoji: '☁️', category: 'Cloud Storage', image: 'https://res.cloudinary.com/dgmjfix9t/image/upload/v1774635668/icloud_oasjgz.png' },
   { id: 'googleone', name: 'Google One 100GB', description: 'Google cloud storage.', monthlyCost: 1.99, emoji: '💾', category: 'Cloud Storage', image: 'https://res.cloudinary.com/dgmjfix9t/image/upload/v1774635669/google_one_qlx1ao.png' },
+  { id: 'onedrive-100gb', name: 'Microsoft OneDrive 100GB', description: 'Microsoft cloud storage.', monthlyCost: 1.99, emoji: '☁️', category: 'Cloud Storage', image: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&q=80&w=800' },
+  { id: 'googleone-2tb', name: 'Google One 2TB', description: 'High storage Google plan.', monthlyCost: 9.99, emoji: '💾', category: 'Cloud Storage', image: 'https://res.cloudinary.com/dgmjfix9t/image/upload/v1774635669/google_one_qlx1ao.png' },
   { id: 'dropbox', name: 'Dropbox Plus', description: 'Secure file storage.', monthlyCost: 9.99, emoji: '📥', category: 'Cloud Storage', image: 'https://res.cloudinary.com/dgmjfix9t/image/upload/v1774635670/dropbox_tkwzgm.png' },
+  { id: 'box-personal-pro', name: 'Box Personal Pro', description: 'Secure cloud storage.', monthlyCost: 10, emoji: '🗄️', category: 'Cloud Storage', image: 'https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=format&fit=crop&q=80&w=800' },
   { id: 'nordvpn', name: 'NordVPN', description: 'Online privacy protection.', monthlyCost: 7.78, emoji: '🛡️', category: 'Security', image: 'https://res.cloudinary.com/dgmjfix9t/image/upload/v1774635671/nordvpn_c0h4ln.png' },
   { id: 'expressvpn', name: 'ExpressVPN', description: 'High-speed VPN.', monthlyCost: 7.33, emoji: '⚡', category: 'Security', image: 'https://res.cloudinary.com/dgmjfix9t/image/upload/v1774635672/expressvpn_z0d8rf.png' },
   { id: 'incogni', name: 'Incogni', description: 'Data privacy removal.', monthlyCost: 13.49, emoji: '🕵️', category: 'Security', image: 'https://res.cloudinary.com/dgmjfix9t/image/upload/v1774635672/incogni_ifynn9.png' },
@@ -441,4 +444,3 @@ export const OTHER_OPTIONS: Option[] = [
   { id: 'rangers', name: 'Texas Rangers Tickets', description: '8 tickets a year.', monthlyCost: 28, emoji: '⚾', image: 'https://images.unsplash.com/photo-1508344928928-7165b67de128?auto=format&fit=crop&q=80&w=800' },
   { id: 'fwssr', name: 'FWSSR', description: 'Annual visit.', monthlyCost: 8.33, emoji: '🐂', image: 'https://images.unsplash.com/photo-1534073133331-c4b62a557083?auto=format&fit=crop&q=80&w=800' },
 ];
-

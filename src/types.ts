@@ -29,6 +29,8 @@ export type Option = {
   notes?: string;
 };
 
+export type FuelPriceEnvironment = 'lower' | 'average' | 'higher';
+
 export type QuizState = {
   currentStep: number;
   regionId: string;
@@ -42,6 +44,8 @@ export type QuizState = {
     subscriptions: string[];
     food: string;
     transportation: string[];
+    fuel: string;
+    fuelPriceEnvironment: FuelPriceEnvironment;
     clothing: string;
     insurance: string[];
     other: string[];
@@ -60,6 +64,7 @@ export const STEPS = [
   'Subscriptions',
   'Food',
   'Transportation',
+  'Fuel',
   'Clothing',
   'Insurance Info',
   'Insurance Selection',
