@@ -10,7 +10,7 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recha
 import { 
   MapPin, Home, ShieldCheck, ChevronRight, ChevronLeft, ChevronDown,
   RotateCcw, Info, CheckCircle2, Calculator,
-  Save, Loader2, Check, Sparkles, GraduationCap, TrendingUp, Briefcase,
+  Save, Loader2, Check, Sparkles,
   Camera, MessageSquare, X,
   PieChart as PieChartIcon 
 } from 'lucide-react';
@@ -42,11 +42,13 @@ import {
   getTransportMonthlyCost,
 } from './lib/calculator';
 import { supabase } from './lib/supabase';
-import { getCareerSuggestions, CareerSuggestion } from './services/gemini';
+import { CareerSuggestion } from './services/gemini';
 import { useCalculatorData } from './hooks/useCalculatorData';
 import AdminPage from './pages/AdminPage';
 
 import { ClothingSelectionStep } from './components/ClothingSelectionStep';
+import { CareerMatchCard } from './components/careers/CareerMatchCard';
+import { CareerDetailModal } from './components/careers/CareerDetailModal';
 import { FuelPlanSelectionStep } from './components/FuelPlanSelectionStep';
 import { GrocerySelectionStep } from './components/GrocerySelectionStep';
 import { InfoButton } from './components/InfoButton';
@@ -63,6 +65,12 @@ import { TransportationGridStep, getTransportationOption } from './components/Tr
 import { UtilitiesSelectionStep } from './components/UtilitiesSelectionStep';
 import { getEnhancedInsuranceOptions } from './content/insuranceInfo';
 import { SUBSCRIPTION_OPTION_INFO } from './content/subscriptionInfo';
+import { RiasecQuiz } from './pages/student/RiasecQuiz';
+import { RiasecSetup } from './pages/student/RiasecSetup';
+import { isRiasecSummary, loadRiasecSummary, saveRiasecSummary } from './lib/riasecStorage';
+import { RiasecSummary } from './types/riasec';
+import { rankCareerMatches } from './lib/rankCareerMatches';
+import { getCareerSuggestionKey, getStableCareerSuggestions } from './lib/careerSuggestionCache';
 
 // App-owned defaults and display tokens.
 const INITIAL_STATE: QuizState = {
@@ -121,6 +129,15 @@ const COLORS = {
 
 const USE_SUPABASE = true;
 const REQUIRED_INDEPENDENT_UTILITY_IDS = ['water', 'trash'];
+const RESULTS_GROUPED_CATEGORIES = ['Streaming', 'Subscriptions', 'Utilities', 'Insurance', 'Other'];
+
+function formatWholeDollar(value: number) {
+  return value.toLocaleString(undefined, { maximumFractionDigits: 0 });
+}
+
+function formatMonthlyCurrency(value: number) {
+  return value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
 
 // Shared badge styling still used by App-owned generic option rendering.
 const USAGE_BADGE_STYLES: Record<string, string> = {
@@ -160,10 +177,22 @@ function getFuelOptionsForType(type: FuelPlanType): Option[] {
   return [];
 }
 
+function getHistoryRiasecSummary(): RiasecSummary | null {
+  const historyState = window.history.state as { riasecResult?: unknown } | null;
+  return isRiasecSummary(historyState?.riasecResult) ? historyState.riasecResult : null;
+}
+
 export default function App() {
   // State
   const [session, setSession] = useState<any>(null);
   const [showHistory, setShowHistory] = useState(false);
+  const [routePath, setRoutePath] = useState(() => window.location.pathname);
+  const [riasecSummary, setRiasecSummary] = useState<RiasecSummary | null>(() =>
+    getHistoryRiasecSummary() || loadRiasecSummary()
+  );
+  const [hasCompletedRiasecSetup, setHasCompletedRiasecSetup] = useState(() =>
+    !!getHistoryRiasecSummary() || !!loadRiasecSummary()
+  );
   const {
     regions,
     internetOptions,
@@ -174,7 +203,8 @@ export default function App() {
     insuranceOptions,
     phonePlanOptions,
     phoneDeviceOptions,
-    transportOptions
+    transportOptions,
+    loading: calculatorDataLoading
   } = useCalculatorData();
   const [state, setState] = useState<QuizState>(() => {
     const saved = localStorage.getItem('lifestyle_calculator_state');
@@ -251,6 +281,24 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('lifestyle_calculator_state', JSON.stringify(state));
   }, [state]);
+
+  useEffect(() => {
+    const handleRouteChange = () => {
+      setRoutePath(window.location.pathname);
+      const routeSummary = getHistoryRiasecSummary();
+      if (routeSummary) {
+        setRiasecSummary(routeSummary);
+        setHasCompletedRiasecSetup(true);
+      } else {
+        const storedSummary = loadRiasecSummary();
+        setRiasecSummary(storedSummary);
+        if (storedSummary) setHasCompletedRiasecSetup(true);
+      }
+    };
+
+    window.addEventListener('popstate', handleRouteChange);
+    return () => window.removeEventListener('popstate', handleRouteChange);
+  }, []);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => setSession(session));
@@ -452,6 +500,28 @@ export default function App() {
     handleSelection(category, updated);
   };
 
+  const openRiasecQuiz = () => {
+    window.history.pushState({}, '', '/riasec');
+    setRoutePath('/riasec');
+    window.scrollTo(0, 0);
+  };
+
+  const handleRiasecHandoff = (summary: RiasecSummary) => {
+    saveRiasecSummary(summary);
+    setRiasecSummary(summary);
+    setHasCompletedRiasecSetup(true);
+    window.history.pushState({ riasecResult: summary }, '', '/');
+    setRoutePath('/');
+    window.scrollTo(0, 0);
+  };
+
+  const handleRiasecSkip = () => {
+    setHasCompletedRiasecSetup(true);
+    window.history.replaceState(window.history.state || {}, '', '/');
+    setRoutePath('/');
+    window.scrollTo(0, 0);
+  };
+
   // Step rendering
   const renderStep = () => {
     const stepName = STEPS[state.currentStep];
@@ -482,6 +552,20 @@ export default function App() {
             >
               Start My Journey <ChevronRight className="w-6 h-6" />
             </button>
+            <button
+              onClick={openRiasecQuiz}
+              className="px-8 py-4 bg-white text-slate-700 rounded-2xl text-base font-black hover:bg-slate-100 transition-all shadow-sm border border-slate-100 active:scale-95"
+            >
+              Take the RIASEC Career Quiz
+            </button>
+            {riasecSummary && (
+              <div className="max-w-2xl rounded-3xl border border-blue-100 bg-blue-50/80 p-5 text-left shadow-sm">
+                <p className="text-xs font-black uppercase tracking-widest text-[#3372B2]">Career interest summary loaded</p>
+                <p className="mt-2 text-sm font-medium leading-relaxed text-slate-600">
+                  Your current RIASEC match is <span className="font-black text-slate-900">{riasecSummary.topThree}</span>. Only this short same-session summary is available to the calculator, not your individual quiz answers.
+                </p>
+              </div>
+            )}
             <div className="grid grid-cols-3 gap-6 w-full max-w-3xl mt-12">
               <div className="p-6 bg-white rounded-3xl border border-slate-100 shadow-sm">
                 <MapPin className="w-8 h-8 text-blue-500 mb-3" />
@@ -725,15 +809,19 @@ export default function App() {
         );
 
       case 'Results':
-        return <ResultsStep state={state} monthlyTotal={monthlyTotal} annualTotal={annualTotal} recommendedSalary={recommendedSalary} onReset={resetQuiz} userId={session?.user?.id} regionOptions={activeRegions} internetOptions={activeInternetOptions} utilityOptions={activeUtilityOptions} streamingOptions={activeStreamingOptions} subscriptionOptions={activeSubscriptionOptions} clothingOptions={activeClothingOptions} insuranceOptions={activeInsuranceOptions} phoneOptions={activePhoneOptions} phonePlanOptions={activePhonePlanOptions} transportOptions={activeTransportOptions} />;
+        return <ResultsStep state={state} monthlyTotal={monthlyTotal} annualTotal={annualTotal} recommendedSalary={recommendedSalary} onReset={resetQuiz} userId={session?.user?.id} regionOptions={activeRegions} internetOptions={activeInternetOptions} utilityOptions={activeUtilityOptions} streamingOptions={activeStreamingOptions} subscriptionOptions={activeSubscriptionOptions} clothingOptions={activeClothingOptions} insuranceOptions={activeInsuranceOptions} phoneOptions={activePhoneOptions} phonePlanOptions={activePhonePlanOptions} transportOptions={activeTransportOptions} riasecSummary={riasecSummary} isCalculatorDataLoading={calculatorDataLoading} />;
 
       default:
         return <div>Step not found</div>;
     }
   };
 
+  if (routePath === '/riasec') {
+    return <RiasecQuiz onTryLifestyle={handleRiasecHandoff} />;
+  }
+
   if (!session) {
-    if (window.location.pathname === '/admin') {
+    if (routePath === '/admin') {
       return (
         <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6">
           <PilotAuthGate />
@@ -748,8 +836,18 @@ export default function App() {
     );
   }
 
-  if (window.location.pathname === '/admin') {
+  if (routePath === '/admin') {
     return <AdminPage />;
+  }
+
+  if (!hasCompletedRiasecSetup) {
+    return (
+      <RiasecSetup
+        onTakeQuiz={openRiasecQuiz}
+        onSubmitKnownCode={handleRiasecHandoff}
+        onSkip={handleRiasecSkip}
+      />
+    );
   }
 
   return (
@@ -1592,27 +1690,52 @@ function HistoryPage({ userId }: { userId: string }) {
 }
 
 // Results.
-function ResultsStep({ state, monthlyTotal, annualTotal, recommendedSalary, onReset, userId, regionOptions, internetOptions, utilityOptions, streamingOptions, subscriptionOptions, clothingOptions, insuranceOptions, phoneOptions, phonePlanOptions, transportOptions }: any) {
+function ResultsStep({ state, monthlyTotal, annualTotal, recommendedSalary, onReset, userId, regionOptions, internetOptions, utilityOptions, streamingOptions, subscriptionOptions, clothingOptions, insuranceOptions, phoneOptions, phonePlanOptions, transportOptions, riasecSummary, isCalculatorDataLoading }: any) {
   const currentRegion = regionOptions.find((r: any) => r.id === state.regionId) || regionOptions[0] || REGIONS[5];
+  const finalizedRecommendedSalary = Math.round(recommendedSalary);
+  const displayedRecommendedSalary = formatWholeDollar(finalizedRecommendedSalary);
+  const matcherRiasecCode = riasecSummary?.topThree || null;
   const [isSaving, setIsSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [careers, setCareers] = useState<CareerSuggestion[]>([]);
   const [isLoadingCareers, setIsLoadingCareers] = useState(true);
+  const [openCareerKey, setOpenCareerKey] = useState<string | null>(null);
+  const [expandedBreakdownCategories, setExpandedBreakdownCategories] = useState<string[]>([]);
+  const latestCareerFetchKey = useRef('');
+  const careerFetchKey = useMemo(
+    () => getCareerSuggestionKey(finalizedRecommendedSalary, currentRegion.name, matcherRiasecCode),
+    [finalizedRecommendedSalary, currentRegion.name, matcherRiasecCode]
+  );
 
   useEffect(() => {
-    const fetchCareers = async () => {
-      setIsLoadingCareers(true);
+    if (isCalculatorDataLoading) return;
+
+    let isActive = true;
+    latestCareerFetchKey.current = careerFetchKey;
+    setOpenCareerKey(null);
+    setIsLoadingCareers(true);
+
+    const fetchCareers = async (fetchKey: string) => {
       try {
-        const suggestions = await getCareerSuggestions(recommendedSalary, currentRegion.name);
+        const suggestions = await getStableCareerSuggestions(fetchKey, finalizedRecommendedSalary, currentRegion.name);
+        if (!isActive || latestCareerFetchKey.current !== fetchKey) return;
         setCareers(suggestions);
       } catch (err) {
+        if (!isActive || latestCareerFetchKey.current !== fetchKey) return;
         console.error('Failed to fetch careers:', err);
+        setCareers([]);
       } finally {
+        if (!isActive || latestCareerFetchKey.current !== fetchKey) return;
         setIsLoadingCareers(false);
       }
     };
-    fetchCareers();
-  }, [recommendedSalary, currentRegion.name]);
+
+    fetchCareers(careerFetchKey);
+
+    return () => {
+      isActive = false;
+    };
+  }, [careerFetchKey, finalizedRecommendedSalary, currentRegion.name, isCalculatorDataLoading]);
 
   const handleSaveResult = async () => {
     setIsSaving(true);
@@ -1696,7 +1819,67 @@ function ResultsStep({ state, monthlyTotal, annualTotal, recommendedSalary, onRe
     return Object.entries(categories).map(([name, value]) => ({ name, value }));
   }, [details]);
 
+  const breakdownRows = useMemo(() => {
+    const groupedCategories = new Set(RESULTS_GROUPED_CATEGORIES);
+    const rows: Array<
+      | { type: 'item'; item: { name: string; cost: number; category: string; emoji?: string } }
+      | { type: 'group'; category: string; emoji?: string; count: number; subtotal: number; items: { name: string; cost: number; category: string; emoji?: string }[] }
+    > = [];
+    const groupedItems = new Map<string, { name: string; cost: number; category: string; emoji?: string }[]>();
+
+    details.forEach((item) => {
+      if (groupedCategories.has(item.category)) {
+        groupedItems.set(item.category, [...(groupedItems.get(item.category) || []), item]);
+      } else {
+        rows.push({ type: 'item', item });
+      }
+    });
+
+    groupedItems.forEach((items, category) => {
+      if (items.length === 1) {
+        rows.push({ type: 'item', item: items[0] });
+        return;
+      }
+
+      rows.push({
+        type: 'group',
+        category,
+        emoji: items[0]?.emoji,
+        count: items.length,
+        subtotal: items.reduce((sum, item) => sum + item.cost, 0),
+        items,
+      });
+    });
+
+    return rows;
+  }, [details]);
+
+  const rankedCareerMatches = useMemo(
+    () => rankCareerMatches(careers, riasecSummary, monthlyTotal),
+    [careers, riasecSummary, monthlyTotal]
+  );
+  const openCareer = useMemo(
+    () => rankedCareerMatches.find((career, index) => `${career.title}-${index}` === openCareerKey) || null,
+    [rankedCareerMatches, openCareerKey]
+  );
+  const toggleBreakdownCategory = (category: string) => {
+    setExpandedBreakdownCategories(prev =>
+      prev.includes(category)
+        ? prev.filter(item => item !== category)
+        : [...prev, category]
+    );
+  };
+
   const budgetChartColors = ['#6366f1', '#f59e0b', '#10b981', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#f97316'];
+
+  if (isCalculatorDataLoading) {
+    return (
+      <div className="py-24 flex flex-col items-center justify-center gap-4 text-slate-400">
+        <Loader2 className="w-10 h-10 animate-spin" />
+        <p className="text-xs font-black uppercase tracking-widest">Finalizing your calculator results...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-12 py-8">
@@ -1723,18 +1906,67 @@ function ResultsStep({ state, monthlyTotal, annualTotal, recommendedSalary, onRe
               </div>
             </div>
             <div className="p-8 space-y-4">
-              {details.map((item, i) => (
-                <div key={i} className="flex justify-between items-center py-3 border-b border-slate-50 last:border-0">
-                  <div className="flex items-center gap-4">
-                    <span className="text-2xl w-8 h-8 flex items-center justify-center bg-slate-50 rounded-lg">{item.emoji}</span>
-                    <div className="flex flex-col">
-                      <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">{item.category}</span>
-                      <span className="font-bold text-slate-700">{item.name}</span>
+              {breakdownRows.map((row, i) => {
+                if (row.type === 'item') {
+                  const { item } = row;
+                  return (
+                    <div key={`${item.category}-${item.name}-${i}`} className="flex justify-between items-center py-3 border-b border-slate-50 last:border-0">
+                      <div className="flex items-center gap-4">
+                        <span className="text-2xl w-8 h-8 flex items-center justify-center bg-slate-50 rounded-lg">{item.emoji}</span>
+                        <div className="flex flex-col">
+                          <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">{item.category}</span>
+                          <span className="font-bold text-slate-700">{item.name}</span>
+                        </div>
+                      </div>
+                      <span className="font-black text-slate-900">${formatMonthlyCurrency(item.cost)}</span>
                     </div>
+                  );
+                }
+
+                const isExpanded = expandedBreakdownCategories.includes(row.category);
+
+                return (
+                  <div key={`${row.category}-${i}`} className="rounded-2xl border border-slate-100 bg-slate-50/70">
+                    <button
+                      onClick={() => toggleBreakdownCategory(row.category)}
+                      className="flex w-full items-center justify-between gap-4 p-4 text-left transition-all hover:bg-slate-100/70"
+                      aria-expanded={isExpanded}
+                    >
+                      <div className="flex items-center gap-4">
+                        <span className="text-2xl w-8 h-8 flex items-center justify-center bg-white rounded-lg">{row.emoji}</span>
+                        <div className="flex flex-col">
+                          <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">{row.category}</span>
+                          <span className="font-bold text-slate-700">{row.count} selected</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="font-black text-slate-900">${formatMonthlyCurrency(row.subtotal)}</span>
+                        <ChevronDown className={`h-5 w-5 text-slate-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                      </div>
+                    </button>
+                    <AnimatePresence initial={false}>
+                      {isExpanded && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: 'auto', opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.2, ease: 'easeOut' }}
+                          className="overflow-hidden"
+                        >
+                          <div className="space-y-2 border-t border-slate-100 px-4 py-3">
+                            {row.items.map((item) => (
+                              <div key={`${row.category}-${item.name}`} className="flex items-center justify-between gap-4 rounded-xl bg-white px-3 py-2">
+                                <span className="text-sm font-bold text-slate-600">{item.name}</span>
+                                <span className="text-sm font-black text-slate-900">${formatMonthlyCurrency(item.cost)}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </div>
-                  <span className="font-black text-slate-900">${item.cost.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
 
@@ -1789,7 +2021,7 @@ function ResultsStep({ state, monthlyTotal, annualTotal, recommendedSalary, onRe
           <div className="bg-orange-500 rounded-3xl p-8 text-white shadow-xl shadow-orange-200 space-y-6">
             <div className="space-y-1">
               <p className="text-orange-100 text-sm font-bold uppercase tracking-widest">Minimum Annual Salary</p>
-              <h4 className="text-5xl font-black">${recommendedSalary.toLocaleString(undefined, { maximumFractionDigits: 0 })}</h4>
+              <h4 className="text-5xl font-black">${displayedRecommendedSalary}</h4>
             </div>
             <p className="text-orange-50/80 font-medium leading-relaxed">
               This represents the total cost of your selected lifestyle over one full year (12 months).
@@ -1844,7 +2076,15 @@ function ResultsStep({ state, monthlyTotal, annualTotal, recommendedSalary, onRe
             </div>
             
             <p className="text-sm text-slate-500 leading-relaxed">
-              Based on your target salary of <span className="font-bold text-slate-900">${recommendedSalary.toLocaleString()}</span>, here are some high-demand careers in <span className="font-bold text-slate-900">{currentRegion.name}</span>:
+              {riasecSummary ? (
+                <>
+                  Based on your <span className="font-bold text-slate-900">{riasecSummary.topThree}</span> RIASEC pattern and target salary of <span className="font-bold text-slate-900">${displayedRecommendedSalary}</span>, here are careers to explore in <span className="font-bold text-slate-900">{currentRegion.name}</span>:
+                </>
+              ) : (
+                <>
+                  Based on your target salary of <span className="font-bold text-slate-900">${displayedRecommendedSalary}</span>, here are some high-demand careers in <span className="font-bold text-slate-900">{currentRegion.name}</span>:
+                </>
+              )}
             </p>
 
             <div className="space-y-4">
@@ -1853,32 +2093,19 @@ function ResultsStep({ state, monthlyTotal, annualTotal, recommendedSalary, onRe
                   <Loader2 className="w-8 h-8 animate-spin" />
                   <p className="text-xs font-bold uppercase tracking-widest">Finding your matches...</p>
                 </div>
-              ) : careers.length > 0 ? (
-                careers.map((career, i) => (
-                  <motion.div 
-                    key={i}
-                    initial={{ x: 20, opacity: 0 }}
-                    animate={{ x: 0, opacity: 1 }}
-                    transition={{ delay: i * 0.1 }}
-                    className="p-4 bg-slate-50 rounded-2xl border border-slate-100 hover:border-indigo-200 hover:bg-indigo-50/30 transition-all group"
-                  >
-                    <div className="flex justify-between items-start mb-2">
-                      <h4 className="font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">{career.title}</h4>
-                      <TrendingUp className="w-4 h-4 text-green-500" />
-                    </div>
-                    <p className="text-xs text-slate-500 mb-3 line-clamp-2">{career.description}</p>
-                    <div className="flex flex-wrap gap-2">
-                      <div className="flex items-center gap-1 px-2 py-1 bg-white border border-slate-100 rounded-lg text-[10px] font-bold text-slate-400 uppercase tracking-tighter">
-                        <GraduationCap className="w-3 h-3" />
-                        {career.education}
-                      </div>
-                      <div className="flex items-center gap-1 px-2 py-1 bg-white border border-slate-100 rounded-lg text-[10px] font-bold text-slate-400 uppercase tracking-tighter">
-                        <Briefcase className="w-3 h-3" />
-                        {career.avgSalary}
-                      </div>
-                    </div>
-                  </motion.div>
-                ))
+              ) : rankedCareerMatches.length > 0 ? (
+                rankedCareerMatches.map((career, i) => {
+                  const careerKey = `${career.title}-${i}`;
+                  return (
+                    <CareerMatchCard
+                      key={careerKey}
+                      career={career}
+                      index={i}
+                      showRiasecTags={!!riasecSummary}
+                      onViewDetails={() => setOpenCareerKey(careerKey)}
+                    />
+                  );
+                })
               ) : (
                 <div className="p-4 bg-slate-50 rounded-2xl border border-dashed border-slate-200 text-center">
                   <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">No matches found. Try again!</p>
@@ -1895,6 +2122,7 @@ function ResultsStep({ state, monthlyTotal, annualTotal, recommendedSalary, onRe
           </button>
         </div>
       </div>
+      <CareerDetailModal career={openCareer} onClose={() => setOpenCareerKey(null)} />
     </div>
   );
 }
