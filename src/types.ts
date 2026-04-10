@@ -31,6 +31,18 @@ export type Option = {
 
 export type FuelPriceEnvironment = 'lower' | 'average' | 'higher';
 
+export type ClothingClosetEntry = {
+  id: string;
+  name: string;
+  category: string;
+  price: number;
+  lifespanMonths: number;
+  quantity: number;
+  image: string;
+};
+
+export type ClothingClosetState = Record<string, ClothingClosetEntry>;
+
 export type QuizState = {
   currentStep: number;
   regionId: string;
@@ -46,7 +58,7 @@ export type QuizState = {
     transportation: string[];
     fuel: string;
     fuelPriceEnvironment: FuelPriceEnvironment;
-    clothing: string;
+    clothingCloset: ClothingClosetState;
     insurance: string[];
     other: string[];
   };

@@ -27,7 +27,6 @@ import {
   SUBSCRIPTION_OPTIONS,
   FOOD_OPTIONS,
   TRANSPORT_OPTIONS,
-  CLOTHING_OPTIONS,
   INSURANCE_OPTIONS,
   OTHER_OPTIONS,
 } from './data/texasData';
@@ -45,8 +44,9 @@ import { supabase } from './lib/supabase';
 import { CareerSuggestion } from './services/gemini';
 import { useCalculatorData } from './hooks/useCalculatorData';
 import AdminPage from './pages/AdminPage';
+import { CLOTHING_GAME_ITEMS } from './data/clothingItems';
 
-import { ClothingSelectionStep } from './components/ClothingSelectionStep';
+import { ClothingGameStep } from './components/ClothingGameStep';
 import { CareerMatchCard } from './components/careers/CareerMatchCard';
 import { CareerDetailModal } from './components/careers/CareerDetailModal';
 import { FuelPlanSelectionStep } from './components/FuelPlanSelectionStep';
@@ -71,6 +71,7 @@ import { isRiasecSummary, loadRiasecSummary, saveRiasecSummary } from './lib/ria
 import { RiasecSummary } from './types/riasec';
 import { rankCareerMatches } from './lib/rankCareerMatches';
 import { getCareerSuggestionKey, getStableCareerSuggestions } from './lib/careerSuggestionCache';
+import { getTotalMonthlyClothingCost, getTotalSelectedItemCount } from './lib/clothingBudget';
 
 // App-owned defaults and display tokens.
 const INITIAL_STATE: QuizState = {
@@ -88,7 +89,7 @@ const INITIAL_STATE: QuizState = {
     transportation: [],
     fuel: '',
     fuelPriceEnvironment: 'average',
-    clothing: '',
+    clothingCloset: {},
     insurance: [],
     other: [],
   },
@@ -199,7 +200,7 @@ export default function App() {
     utilityOptions,
     streamingOptions,
     subscriptionOptions,
-    clothingOptions,
+    clothingItems,
     insuranceOptions,
     phonePlanOptions,
     phoneDeviceOptions,
@@ -244,6 +245,16 @@ export default function App() {
           return id;
         });
       }
+      if (
+        !migrated.selections.clothingCloset ||
+        Array.isArray(migrated.selections.clothingCloset) ||
+        typeof migrated.selections.clothingCloset !== 'object'
+      ) {
+        migrated.selections.clothingCloset = {};
+      }
+      if ('clothing' in migrated.selections) {
+        delete migrated.selections.clothing;
+      }
 
       return migrated;
     } catch {
@@ -257,7 +268,7 @@ export default function App() {
   const activeUtilityOptions = USE_SUPABASE && utilityOptions.length ? utilityOptions : UTILITY_OPTIONS;
   const activeStreamingOptions = USE_SUPABASE && streamingOptions.length ? streamingOptions : STREAMING_OPTIONS;
   const activeSubscriptionOptions = getEnhancedSubscriptionOptions(USE_SUPABASE && subscriptionOptions.length ? subscriptionOptions : SUBSCRIPTION_OPTIONS);
-  const activeClothingOptions = USE_SUPABASE && clothingOptions.length ? clothingOptions : CLOTHING_OPTIONS;
+  const activeClothingGameItems = USE_SUPABASE && clothingItems.length ? clothingItems : CLOTHING_GAME_ITEMS;
   const activeInsuranceOptions = getEnhancedInsuranceOptions(USE_SUPABASE && insuranceOptions.length ? insuranceOptions : INSURANCE_OPTIONS);
   const activePhonePlanOptions = USE_SUPABASE && phonePlanOptions.length ? phonePlanOptions : PHONE_PLAN_OPTIONS;
   const activeTransportOptions = transportOptions.length ? transportOptions : TRANSPORT_OPTIONS;
@@ -425,8 +436,7 @@ export default function App() {
     total += getFuelMonthlyCost(fuel, state.selections.fuelPriceEnvironment);
 
     // Clothing
-    const clothing = activeClothingOptions.find((o: any) => o.id === state.selections.clothing);
-    if (clothing) total += clothing.monthlyCost;
+    total += getTotalMonthlyClothingCost(state.selections.clothingCloset);
 
     // Insurance
     state.selections.insurance.forEach(id => {
@@ -498,6 +508,16 @@ export default function App() {
       ? current.filter(v => v !== value)
       : [...current, value];
     handleSelection(category, updated);
+  };
+
+  const handleClothingClosetChange = (clothingCloset: QuizState['selections']['clothingCloset']) => {
+    setState(prev => ({
+      ...prev,
+      selections: {
+        ...prev.selections,
+        clothingCloset,
+      },
+    }));
   };
 
   const openRiasecQuiz = () => {
@@ -763,12 +783,15 @@ export default function App() {
 
       case 'Clothing':
         return (
-          <QuizWrapper colors={COLORS} title="Choose Your Clothing Package" description="What's your style budget?">
-            <ClothingSelectionStep
-              options={activeClothingOptions}
-              category="clothing"
-              state={state}
-              onSelect={handleSelection}
+          <QuizWrapper
+            colors={COLORS}
+            title="Build Your Closet"
+            description="Choose the clothes and accessories you actually use, then see what your wardrobe might cost over time."
+          >
+            <ClothingGameStep
+              clothingItems={activeClothingGameItems}
+              clothingCloset={state.selections.clothingCloset}
+              onClosetChange={handleClothingClosetChange}
             />
           </QuizWrapper>
         );
@@ -809,7 +832,7 @@ export default function App() {
         );
 
       case 'Results':
-        return <ResultsStep state={state} monthlyTotal={monthlyTotal} annualTotal={annualTotal} recommendedSalary={recommendedSalary} onReset={resetQuiz} userId={session?.user?.id} regionOptions={activeRegions} internetOptions={activeInternetOptions} utilityOptions={activeUtilityOptions} streamingOptions={activeStreamingOptions} subscriptionOptions={activeSubscriptionOptions} clothingOptions={activeClothingOptions} insuranceOptions={activeInsuranceOptions} phoneOptions={activePhoneOptions} phonePlanOptions={activePhonePlanOptions} transportOptions={activeTransportOptions} riasecSummary={riasecSummary} isCalculatorDataLoading={calculatorDataLoading} />;
+        return <ResultsStep state={state} monthlyTotal={monthlyTotal} annualTotal={annualTotal} recommendedSalary={recommendedSalary} onReset={resetQuiz} userId={session?.user?.id} regionOptions={activeRegions} internetOptions={activeInternetOptions} utilityOptions={activeUtilityOptions} streamingOptions={activeStreamingOptions} subscriptionOptions={activeSubscriptionOptions} insuranceOptions={activeInsuranceOptions} phoneOptions={activePhoneOptions} phonePlanOptions={activePhonePlanOptions} transportOptions={activeTransportOptions} riasecSummary={riasecSummary} isCalculatorDataLoading={calculatorDataLoading} />;
 
       default:
         return <div>Step not found</div>;
@@ -1690,7 +1713,7 @@ function HistoryPage({ userId }: { userId: string }) {
 }
 
 // Results.
-function ResultsStep({ state, monthlyTotal, annualTotal, recommendedSalary, onReset, userId, regionOptions, internetOptions, utilityOptions, streamingOptions, subscriptionOptions, clothingOptions, insuranceOptions, phoneOptions, phonePlanOptions, transportOptions, riasecSummary, isCalculatorDataLoading }: any) {
+function ResultsStep({ state, monthlyTotal, annualTotal, recommendedSalary, onReset, userId, regionOptions, internetOptions, utilityOptions, streamingOptions, subscriptionOptions, insuranceOptions, phoneOptions, phonePlanOptions, transportOptions, riasecSummary, isCalculatorDataLoading }: any) {
   const currentRegion = regionOptions.find((r: any) => r.id === state.regionId) || regionOptions[0] || REGIONS[5];
   const finalizedRecommendedSalary = Math.round(recommendedSalary);
   const displayedRecommendedSalary = formatWholeDollar(finalizedRecommendedSalary);
@@ -1803,13 +1826,22 @@ function ResultsStep({ state, monthlyTotal, annualTotal, recommendedSalary, onRe
         emoji: fuel.emoji,
       });
     }
-    add(clothingOptions.find((o: any) => o.id === state.selections.clothing), 'Clothing');
+    const clothingItemCount = getTotalSelectedItemCount(state.selections.clothingCloset);
+    const clothingMonthlyCost = getTotalMonthlyClothingCost(state.selections.clothingCloset);
+    if (clothingItemCount > 0 && clothingMonthlyCost > 0) {
+      items.push({
+        name: `Closet Items (${clothingItemCount})`,
+        cost: clothingMonthlyCost,
+        category: 'Clothing',
+        emoji: '👕',
+      });
+    }
     
     state.selections.insurance.forEach((id: string) => add(insuranceOptions.find((o: any) => o.id === id), 'Insurance', m));
     state.selections.other.forEach((id: string) => add(OTHER_OPTIONS.find(o => o.id === id), 'Other'));
 
     return items;
-  }, [state.selections, currentRegion.costMultiplier, internetOptions, utilityOptions, streamingOptions, subscriptionOptions, clothingOptions, insuranceOptions, phoneOptions, phonePlanOptions, transportOptions]);
+  }, [state.selections, currentRegion.costMultiplier, internetOptions, utilityOptions, streamingOptions, subscriptionOptions, insuranceOptions, phoneOptions, phonePlanOptions, transportOptions]);
 
   const categoryData = useMemo(() => {
     const categories: { [key: string]: number } = {};

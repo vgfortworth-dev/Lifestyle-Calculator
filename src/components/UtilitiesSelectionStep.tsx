@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { AnimatePresence, motion } from 'motion/react';
-import { Check, X, Zap } from 'lucide-react';
+import { Check, Zap } from 'lucide-react';
 import { BeforeYouChooseCallout } from './BeforeYouChooseCallout';
 import { InfoButton } from './InfoButton';
+import { LessonAccordion, LessonAccordionItem } from './LessonAccordion';
 import { ModalShell } from './ModalShell';
 import { ELECTRICITY_PLAN_INFO } from '../content/electricityInfo';
 import { Option } from '../types';
@@ -167,100 +167,84 @@ export function UtilitiesSelectionStep({
 }
 
 function UtilitiesLessonModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
+  const lessonItems: LessonAccordionItem[] = [
+    {
+      id: 'utilities-basics',
+      title: 'What are utilities?',
+      summary: 'Utilities are the basic services people usually need where they live.',
+      content: (
+        <p className="pt-4 text-sm font-medium leading-relaxed text-slate-600">
+          Utilities are the basic services needed to live in a home, apartment, or other place to live. These services usually include electricity, water, and trash pickup.
+        </p>
+      ),
+    },
+    {
+      id: 'utilities-why-matter',
+      title: 'Why do utilities matter?',
+      summary: 'They are part of your monthly living cost, not just a one-time bill.',
+      content: (
+        <p className="pt-4 text-sm font-medium leading-relaxed text-orange-900/80">
+          Utilities are part of the monthly cost of living. Even if rent seems affordable, utilities can increase how much you spend each month.
+        </p>
+      ),
+    },
+    {
+      id: 'utilities-common-types',
+      title: 'Common types of utilities',
+      summary: 'Electricity, water, and trash all cover different daily needs.',
+      content: (
+        <div className="grid grid-cols-1 gap-3 pt-4 sm:grid-cols-3">
+          {utilityBlocks.map((item) => (
+            <div key={item.title} className="rounded-2xl border border-blue-100 bg-blue-50/70 p-4">
+              <p className="font-black text-[#3372B2]">{item.title}</p>
+              <p className="mt-2 text-sm font-medium leading-relaxed text-slate-600">{item.body}</p>
+            </div>
+          ))}
+        </div>
+      ),
+    },
+    {
+      id: 'utilities-housing-choice',
+      title: 'Which utilities depend on where you live?',
+      summary: 'Some costs depend on whether you live on your own or with family.',
+      content: (
+        <p className="pt-4 text-sm font-medium leading-relaxed text-slate-600">
+          Some utilities depend on your housing choice. For example, someone living in a house or apartment may need to pay for water and trash, while someone living at home with family may not pay those bills directly.
+        </p>
+      ),
+    },
+    {
+      id: 'utilities-think-about-it',
+      title: 'Think about it',
+      summary: 'Utilities are one of the extra costs that make real budgets feel different.',
+      content: (
+        <div className="pt-4">
+          <p className="text-sm font-medium leading-relaxed text-emerald-900/80">
+            When people move into their own place, they often have to pay more than just rent. Utilities are one of the extra monthly costs that can affect a budget.
+          </p>
+          <p className="mt-4 rounded-xl bg-white px-4 py-3 text-sm font-black text-slate-800 shadow-sm">
+            Which utility do you think people use every day without thinking about it?
+          </p>
+        </div>
+      ),
+    },
+  ];
+
   return (
-    <AnimatePresence>
-      {isOpen && (
-        <motion.div
-          className="fixed inset-0 z-[250] flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          onClick={onClose}
-        >
-          <motion.div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="utilities-lesson-title"
-            className="max-h-[90vh] w-full max-w-3xl overflow-hidden rounded-3xl bg-white shadow-2xl"
-            initial={{ opacity: 0, y: 24, scale: 0.96 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 16, scale: 0.96 }}
-            transition={{ duration: 0.2 }}
-            onClick={(event) => event.stopPropagation()}
-          >
-            <div className="flex items-start justify-between gap-4 bg-[#3372B2] px-6 py-5 text-white">
-              <div>
-                <p className="text-xs font-black uppercase tracking-widest text-blue-100">Utilities Mini Lesson</p>
-                <h2 id="utilities-lesson-title" className="mt-1 text-2xl font-black">Quick Lesson: How Utilities Work</h2>
-              </div>
-              <button
-                onClick={onClose}
-                className="rounded-full bg-white/10 p-2 transition-colors hover:bg-white/20"
-                aria-label="Close quick lesson"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <div className="max-h-[65vh] overflow-y-auto p-6 sm:p-8">
-              <div className="space-y-6">
-                <section className="rounded-2xl border border-slate-100 bg-slate-50 p-5">
-                  <h3 className="text-lg font-black text-[#3372B2]">What are utilities?</h3>
-                  <p className="mt-2 text-sm font-medium leading-relaxed text-slate-600">
-                    Utilities are the basic services needed to live in a home, apartment, or other place to live. These services usually include electricity, water, and trash pickup.
-                  </p>
-                </section>
-
-                <section className="rounded-2xl border border-orange-100 bg-orange-50 p-5">
-                  <h3 className="text-lg font-black text-orange-600">Why do utilities matter?</h3>
-                  <p className="mt-2 text-sm font-medium leading-relaxed text-orange-900/80">
-                    Utilities are part of the monthly cost of living. Even if rent seems affordable, utilities can increase how much you spend each month.
-                  </p>
-                </section>
-
-                <section className="space-y-3">
-                  <h3 className="text-lg font-black text-[#3372B2]">Common types of utilities</h3>
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                    {utilityBlocks.map((item) => (
-                      <div key={item.title} className="rounded-2xl border border-blue-100 bg-blue-50/70 p-4">
-                        <p className="font-black text-[#3372B2]">{item.title}</p>
-                        <p className="mt-2 text-sm font-medium leading-relaxed text-slate-600">{item.body}</p>
-                      </div>
-                    ))}
-                  </div>
-                </section>
-
-                <section className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
-                  <h3 className="text-lg font-black text-[#3372B2]">Which utilities depend on where you live?</h3>
-                  <p className="mt-2 text-sm font-medium leading-relaxed text-slate-600">
-                    Some utilities depend on your housing choice. For example, someone living in a house or apartment may need to pay for water and trash, while someone living at home with family may not pay those bills directly.
-                  </p>
-                </section>
-
-                <section className="rounded-2xl border border-emerald-100 bg-emerald-50 p-5">
-                  <h3 className="text-lg font-black text-emerald-700">Think about it</h3>
-                  <p className="mt-2 text-sm font-medium leading-relaxed text-emerald-900/80">
-                    When people move into their own place, they often have to pay more than just rent. Utilities are one of the extra monthly costs that can affect a budget.
-                  </p>
-                  <p className="mt-4 rounded-xl bg-white px-4 py-3 text-sm font-black text-slate-800 shadow-sm">
-                    Which utility do you think people use every day without thinking about it?
-                  </p>
-                </section>
-              </div>
-            </div>
-
-            <div className="border-t border-slate-100 bg-slate-50 px-6 py-4">
-              <button
-                onClick={onClose}
-                className="w-full rounded-xl bg-orange-500 px-5 py-3 font-bold text-white shadow-lg shadow-orange-100 transition-all hover:bg-orange-600 active:scale-[0.99]"
-              >
-                Back to Utilities
-              </button>
-            </div>
-          </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>
+    <ModalShell
+      isOpen={isOpen}
+      onClose={onClose}
+      eyebrow="Utilities Mini Lesson"
+      title="Quick Lesson: How Utilities Work"
+      labelledBy="utilities-lesson-title"
+      footerLabel="Back to Utilities"
+      maxWidthClassName="max-w-3xl"
+      headerClassName="bg-[#3372B2] text-white"
+      titleClassName="mt-1 text-2xl font-black"
+      closeButtonClassName="rounded-full bg-white/10 p-2 transition-colors hover:bg-white/20"
+    >
+      <LessonAccordion items={lessonItems} />
+    </ModalShell>
   );
 }
 

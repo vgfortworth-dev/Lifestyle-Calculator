@@ -23,6 +23,7 @@ export function RiasecQuiz({ onTryLifestyle }: RiasecQuizProps) {
   const currentQuestion = questions[currentQuestionIndex];
   const currentAnswer = currentQuestion ? answers[currentQuestion.id] : undefined;
   const progressQuestion = Math.min(currentQuestionIndex + 1, questions.length);
+  const nextQuestionImageUrl = questions[currentQuestionIndex + 1]?.imageUrl;
   const sortedScores = useMemo(() => {
     if (!result) return [];
     return result.rankedCategories.map((category) => ({
@@ -42,6 +43,10 @@ export function RiasecQuiz({ onTryLifestyle }: RiasecQuizProps) {
       setQuestions(loaded.questions);
       setQuestionSource(loaded.source);
       setIsLoadingQuestions(false);
+
+      if (import.meta.env.DEV) {
+        console.info(`[RIASEC] Quiz is using ${loaded.source} with ${loaded.questions.length} question(s).`);
+      }
     };
 
     fetchQuestions();
@@ -50,6 +55,14 @@ export function RiasecQuiz({ onTryLifestyle }: RiasecQuizProps) {
       isActive = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (!nextQuestionImageUrl) return;
+
+    const preloadImage = new Image();
+    preloadImage.decoding = 'async';
+    preloadImage.src = nextQuestionImageUrl;
+  }, [nextQuestionImageUrl]);
 
   const handleAnswer = (value: RiasecAnswerValue) => {
     if (!currentQuestion) return;
@@ -135,6 +148,14 @@ export function RiasecQuiz({ onTryLifestyle }: RiasecQuizProps) {
               <ChevronLeft className="h-4 w-4" />
               Back
             </button>
+          </div>
+        )}
+
+        {hasStarted && !result && !isLoadingQuestions && !currentQuestion && (
+          <div className="rounded-3xl border border-red-100 bg-white p-8 shadow-xl">
+            <p className="text-center text-sm font-bold text-red-600">
+              No active RIASEC questions were available.
+            </p>
           </div>
         )}
 

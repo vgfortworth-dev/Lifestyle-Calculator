@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react';
-import { AnimatePresence, motion } from 'motion/react';
-import { Check, Wifi, X } from 'lucide-react';
+import { Check, Wifi } from 'lucide-react';
 import { BeforeYouChooseCallout } from './BeforeYouChooseCallout';
+import { LessonAccordion, LessonAccordionItem } from './LessonAccordion';
+import { ModalShell } from './ModalShell';
 import { SingleSelectStepProps } from '../types/componentProps';
 import { EnhancedInternetOption, InternetPlanDetails } from '../types/options';
 
@@ -218,109 +219,93 @@ export function InternetSelectionStep({
 }
 
 function InternetLessonModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
+  const lessonItems: LessonAccordionItem[] = [
+    {
+      id: 'internet-basics',
+      title: 'What is home internet?',
+      summary: 'Home internet keeps your devices connected for school, streaming, and more.',
+      content: (
+        <p className="pt-4 text-sm font-medium leading-relaxed text-slate-600">
+          Home internet is what allows your household to connect to Wi-Fi for streaming, gaming, schoolwork, and more.
+        </p>
+      ),
+    },
+    {
+      id: 'internet-paying-for',
+      title: 'What are you paying for?',
+      summary: 'Speed, devices, and how you use the internet all affect the plan you need.',
+      content: (
+        <div className="grid grid-cols-1 gap-3 pt-4 sm:grid-cols-3">
+          {explanationBlocks.map((item) => (
+            <div key={item.title} className="rounded-2xl border border-blue-100 bg-blue-50/70 p-4">
+              <p className="font-black text-[#3372B2]">{item.title}</p>
+              <p className="mt-2 text-sm font-medium leading-relaxed text-slate-600">{item.body}</p>
+            </div>
+          ))}
+        </div>
+      ),
+    },
+    {
+      id: 'internet-speed',
+      title: 'What do speeds mean?',
+      summary: 'Higher speeds help more people stream, game, and stay online at once.',
+      content: (
+        <div className="grid grid-cols-1 gap-3 pt-4 sm:grid-cols-3">
+          {speedExamples.map((item) => (
+            <div key={item.title} className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
+              <p className="font-black text-slate-900">{item.title}</p>
+              <p className="mt-2 text-sm font-medium leading-relaxed text-slate-600">{item.body}</p>
+            </div>
+          ))}
+        </div>
+      ),
+    },
+    {
+      id: 'internet-connection-type',
+      title: 'Fiber vs Cable',
+      summary: 'Both can work well, but they feel a little different in real life.',
+      content: (
+        <div className="grid grid-cols-1 gap-3 pt-4 sm:grid-cols-2">
+          {connectionTypes.map((item) => (
+            <div key={item.title} className="rounded-2xl bg-white p-4 shadow-sm">
+              <p className="font-black text-orange-700">{item.title}</p>
+              <p className="mt-2 text-sm font-medium leading-relaxed text-orange-900/80">{item.body}</p>
+            </div>
+          ))}
+        </div>
+      ),
+    },
+    {
+      id: 'internet-think-about-it',
+      title: 'Think about it',
+      summary: 'The best internet plan depends on how your household really uses Wi-Fi.',
+      content: (
+        <div className="pt-4">
+          <p className="text-sm font-medium leading-relaxed text-emerald-900/80">
+            The best internet plan depends on how many people are using it and what they do online.
+          </p>
+          <p className="mt-4 rounded-xl bg-white px-4 py-3 text-sm font-black text-slate-800 shadow-sm">
+            How many devices do you think would be connected to your internet at home?
+          </p>
+        </div>
+      ),
+    },
+  ];
+
   return (
-    <AnimatePresence>
-      {isOpen && (
-        <motion.div
-          className="fixed inset-0 z-[250] flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          onClick={onClose}
-        >
-          <motion.div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="internet-lesson-title"
-            className="max-h-[90vh] w-full max-w-3xl overflow-hidden rounded-3xl bg-white shadow-2xl"
-            initial={{ opacity: 0, y: 24, scale: 0.96 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 16, scale: 0.96 }}
-            transition={{ duration: 0.2 }}
-            onClick={(event) => event.stopPropagation()}
-          >
-            <div className="flex items-start justify-between gap-4 bg-[#3372B2] px-6 py-5 text-white">
-              <div>
-                <p className="text-xs font-black uppercase tracking-widest text-blue-100">Internet Mini Lesson</p>
-                <h2 id="internet-lesson-title" className="mt-1 text-2xl font-black">Quick Lesson: How Internet Plans Work</h2>
-              </div>
-              <button
-                onClick={onClose}
-                className="rounded-full bg-white/10 p-2 transition-colors hover:bg-white/20"
-                aria-label="Close quick lesson"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <div className="max-h-[65vh] overflow-y-auto p-6 sm:p-8">
-              <div className="space-y-6">
-                <section className="rounded-2xl border border-slate-100 bg-slate-50 p-5">
-                  <h3 className="text-lg font-black text-[#3372B2]">What is home internet?</h3>
-                  <p className="mt-2 text-sm font-medium leading-relaxed text-slate-600">
-                    Home internet is what allows your household to connect to Wi-Fi for streaming, gaming, schoolwork, and more.
-                  </p>
-                </section>
-
-                <section className="space-y-3">
-                  <h3 className="text-lg font-black text-[#3372B2]">What are you paying for?</h3>
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                    {explanationBlocks.map((item) => (
-                      <div key={item.title} className="rounded-2xl border border-blue-100 bg-blue-50/70 p-4">
-                        <p className="font-black text-[#3372B2]">{item.title}</p>
-                        <p className="mt-2 text-sm font-medium leading-relaxed text-slate-600">{item.body}</p>
-                      </div>
-                    ))}
-                  </div>
-                </section>
-
-                <section className="space-y-3">
-                  <h3 className="text-lg font-black text-[#3372B2]">What do speeds mean?</h3>
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                    {speedExamples.map((item) => (
-                      <div key={item.title} className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
-                        <p className="font-black text-slate-900">{item.title}</p>
-                        <p className="mt-2 text-sm font-medium leading-relaxed text-slate-600">{item.body}</p>
-                      </div>
-                    ))}
-                  </div>
-                </section>
-
-                <section className="space-y-3 rounded-2xl border border-orange-100 bg-orange-50 p-5">
-                  <h3 className="text-lg font-black text-orange-600">Fiber vs Cable</h3>
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    {connectionTypes.map((item) => (
-                      <div key={item.title} className="rounded-2xl bg-white p-4 shadow-sm">
-                        <p className="font-black text-orange-700">{item.title}</p>
-                        <p className="mt-2 text-sm font-medium leading-relaxed text-orange-900/80">{item.body}</p>
-                      </div>
-                    ))}
-                  </div>
-                </section>
-
-                <section className="rounded-2xl border border-emerald-100 bg-emerald-50 p-5">
-                  <h3 className="text-lg font-black text-emerald-700">Think about it</h3>
-                  <p className="mt-2 text-sm font-medium leading-relaxed text-emerald-900/80">
-                    The best internet plan depends on how many people are using it and what they do online.
-                  </p>
-                  <p className="mt-4 rounded-xl bg-white px-4 py-3 text-sm font-black text-slate-800 shadow-sm">
-                    How many devices do you think would be connected to your internet at home?
-                  </p>
-                </section>
-              </div>
-            </div>
-
-            <div className="border-t border-slate-100 bg-slate-50 px-6 py-4">
-              <button
-                onClick={onClose}
-                className="w-full rounded-xl bg-orange-500 px-5 py-3 font-bold text-white shadow-lg shadow-orange-100 transition-all hover:bg-orange-600 active:scale-[0.99]"
-              >
-                Back to Plans
-              </button>
-            </div>
-          </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>
+    <ModalShell
+      isOpen={isOpen}
+      onClose={onClose}
+      eyebrow="Internet Mini Lesson"
+      title="Quick Lesson: How Internet Plans Work"
+      labelledBy="internet-lesson-title"
+      footerLabel="Back to Plans"
+      maxWidthClassName="max-w-3xl"
+      headerClassName="bg-[#3372B2] text-white"
+      titleClassName="mt-1 text-2xl font-black"
+      closeButtonClassName="rounded-full bg-white/10 p-2 transition-colors hover:bg-white/20"
+    >
+      <LessonAccordion items={lessonItems} />
+    </ModalShell>
   );
 }

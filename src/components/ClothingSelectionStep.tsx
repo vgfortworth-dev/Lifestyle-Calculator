@@ -1,17 +1,19 @@
 import { Check } from 'lucide-react';
-import { SingleSelectStepProps } from '../types/componentProps';
+import { Option } from '../types';
 
-type ClothingSelectionStepProps = SingleSelectStepProps<'clothing'>;
+type ClothingSelectionStepProps = {
+  options: Option[];
+  selectedId?: string;
+  onSelect: (value: string) => void;
+  multiplier?: number;
+};
 
 export function ClothingSelectionStep({
   options,
-  category,
-  state,
+  selectedId,
   onSelect,
   multiplier = 1,
 }: ClothingSelectionStepProps) {
-  const selectedId = state.selections[category];
-
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
       {options.map((opt) => {
@@ -20,7 +22,7 @@ export function ClothingSelectionStep({
         return (
           <button
             key={opt.id}
-            onClick={() => onSelect(category, opt.id)}
+            onClick={() => onSelect(opt.id)}
             className={`relative flex flex-col items-center text-center p-6 transition-all duration-200 ease-out border-2 rounded-3xl group bg-white ${
               isSelected
                 ? 'border-[#10B981] ring-2 ring-emerald-50 bg-emerald-50/10'

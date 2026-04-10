@@ -1,3 +1,5 @@
+import { useEffect, useState } from 'react';
+import { ImageOff } from 'lucide-react';
 import { RiasecAnswerValue, RiasecQuestion } from '../../types/riasec';
 
 const ANSWER_OPTIONS: { label: string; value: RiasecAnswerValue; description: string }[] = [
@@ -14,22 +16,52 @@ type RiasecQuestionCardProps = {
 };
 
 export function RiasecQuestionCard({ question, selectedValue, onAnswer }: RiasecQuestionCardProps) {
+  const [imageFailed, setImageFailed] = useState(false);
+  const [imageLoaded, setImageLoaded] = useState(false);
+  const showImage = !!question.imageUrl && !imageFailed;
+
+  useEffect(() => {
+    setImageFailed(false);
+    setImageLoaded(false);
+  }, [question.id, question.imageUrl]);
+
   return (
-    <div className="space-y-6 rounded-3xl border border-slate-100 bg-white p-6 shadow-xl">
-      <div className="space-y-2 text-center">
-        <p className="text-xs font-black uppercase tracking-widest text-[#3372B2]">How much would you enjoy this?</p>
-        <h2 className="text-2xl font-black text-slate-900">{question.prompt}</h2>
+    <div className="space-y-6">
+      <div className="relative h-[240px] overflow-hidden rounded-3xl border border-slate-100 bg-white shadow-xl sm:h-[300px]">
+        {!imageLoaded && (
+          <div className="absolute inset-0 animate-pulse bg-gradient-to-br from-slate-100 via-slate-50 to-slate-100" />
+        )}
+        {showImage ? (
+          <>
+            <img
+              src={question.imageUrl || undefined}
+              alt={question.altText || question.prompt}
+              className={`h-full w-full object-cover object-center transition-opacity duration-300 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
+              loading="eager"
+              decoding="async"
+              fetchPriority="high"
+              onLoad={() => setImageLoaded(true)}
+              onError={() => setImageFailed(true)}
+            />
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-slate-950/10 to-transparent" />
+          </>
+        ) : (
+          <div className="flex h-full w-full items-center justify-center bg-slate-100 text-slate-400">
+            <div className="flex flex-col items-center gap-3 text-center">
+              <ImageOff className="h-10 w-10" />
+              <p className="text-xs font-black uppercase tracking-widest">
+                {question.imagePath ? 'Image unavailable' : 'Question image'}
+              </p>
+            </div>
+          </div>
+        )}
       </div>
 
-      {question.imagePath && (
-        <div className="overflow-hidden rounded-2xl border border-slate-100 bg-slate-50">
-          <img
-            src={question.imagePath}
-            alt={question.altText || ''}
-            className="h-48 w-full object-cover"
-          />
-        </div>
-      )}
+      <div className="space-y-6 rounded-3xl border border-slate-100 bg-white p-6 shadow-xl sm:p-8">
+      <div className="space-y-2 text-center">
+        <p className="text-xs font-black uppercase tracking-widest text-[#3372B2]">How much would you enjoy this?</p>
+        <h2 className="mx-auto max-w-2xl text-2xl font-black leading-tight text-slate-900 sm:text-3xl">{question.prompt}</h2>
+      </div>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {ANSWER_OPTIONS.map((option) => {
@@ -50,6 +82,7 @@ export function RiasecQuestionCard({ question, selectedValue, onAnswer }: Riasec
             </button>
           );
         })}
+      </div>
       </div>
     </div>
   );

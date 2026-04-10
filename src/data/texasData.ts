@@ -409,13 +409,6 @@ export const TRANSPORT_OPTIONS: Option[] = [
   { id: 'luxury-truck-used', name: 'Used Luxury Truck', description: 'Premium older truck.', monthlyCost: 790.24, emoji: '💎', category: 'Personal Vehicles', image: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&q=80&w=800' },
 ];
 
-export const CLOTHING_OPTIONS: Option[] = [
-  { id: 'tier1', name: 'Tier 1: The Essentialist', description: 'Function over fashion, thrift stores.', monthlyCost: 50, emoji: '👕', image: 'https://images.unsplash.com/photo-1489987707025-afc232f7ea0f?auto=format&fit=crop&q=80&w=800' },
-  { id: 'tier2', name: 'Tier 2: The Fast-Fashion Fan', description: 'Latest TikTok trends, Shein, Temu.', monthlyCost: 83, emoji: '👗', image: 'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&q=80&w=800' },
-  { id: 'tier3', name: 'Tier 3: The Reliable Regular', description: 'Solid basics, Old Navy, Target.', monthlyCost: 133, emoji: '👖', image: 'https://images.unsplash.com/photo-1441984904996-e0b6ba687e04?auto=format&fit=crop&q=80&w=800' },
-  { id: 'tier4', name: 'Tier 4: The Brand Enthusiast', description: 'Premium brands, Nike, Lululemon.', monthlyCost: 200, emoji: '👟', image: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&q=80&w=800' },
-];
-
 export const INSURANCE_OPTIONS: Option[] = [
   { id: 'auto-statefarm', name: 'Auto: State Farm', description: 'Local agent service.', monthlyCost: 189, category: 'Auto', emoji: '🚗', image: 'https://images.unsplash.com/photo-1560179707-f14e90ef3623?auto=format&fit=crop&q=80&w=800' },
   { id: 'auto-geico', name: 'Auto: GEICO', description: 'Lowest sticker price.', monthlyCost: 165, category: 'Auto', emoji: '🦎', image: 'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&q=80&w=800' },

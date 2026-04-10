@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { AnimatePresence, motion } from 'motion/react';
-import { Check, Info, Smartphone, X } from 'lucide-react';
+import { Check, Info, Smartphone } from 'lucide-react';
 import { BeforeYouChooseCallout } from './BeforeYouChooseCallout';
+import { LessonAccordion, LessonAccordionItem } from './LessonAccordion';
+import { ModalShell } from './ModalShell';
 import { AppColorTokens, SingleSelectStepProps } from '../types/componentProps';
 
 type PhonePlanSelectionStepProps = SingleSelectStepProps<'phonePlan'> & {
@@ -105,104 +106,88 @@ export function PhonePlanSelectionStep({
 }
 
 function PhonePlanLessonModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
+  const lessonItems: LessonAccordionItem[] = [
+    {
+      id: 'phone-plan-basics',
+      title: 'What is a phone plan?',
+      summary: 'A monthly plan helps your phone call, text, and use the internet.',
+      content: (
+        <p className="pt-4 text-sm font-medium leading-relaxed text-slate-600">
+          A phone plan is what you pay for each month so your phone can call, text, and use the internet.
+        </p>
+      ),
+    },
+    {
+      id: 'phone-plan-paying-for',
+      title: 'What are you paying for?',
+      summary: 'Plans usually include data, speed, and sometimes hotspot access.',
+      content: (
+        <div className="grid grid-cols-1 gap-3 pt-4 sm:grid-cols-3">
+          {explanationBlocks.map((item) => (
+            <div key={item.title} className="rounded-2xl border border-blue-100 bg-blue-50/70 p-4">
+              <p className="font-black text-[#3372B2]">{item.title}</p>
+              <p className="mt-2 text-sm font-medium leading-relaxed text-slate-600">{item.body}</p>
+            </div>
+          ))}
+        </div>
+      ),
+    },
+    {
+      id: 'phone-plan-unlimited',
+      title: 'What does "unlimited" mean?',
+      summary: 'Unlimited does not always mean unlimited fast data.',
+      content: (
+        <p className="pt-4 text-sm font-medium leading-relaxed text-orange-900/80">
+          Unlimited does not always mean unlimited fast data. Some phone plans may slow down after you use a certain amount.
+        </p>
+      ),
+    },
+    {
+      id: 'phone-plan-user-type',
+      title: 'Which type of user are you?',
+      summary: 'Think about how often you stream, scroll, and stay online.',
+      content: (
+        <div className="grid grid-cols-1 gap-3 pt-4 sm:grid-cols-3">
+          {userTypes.map((item) => (
+            <div key={item.title} className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
+              <p className="font-black text-slate-900">{item.title}</p>
+              <p className="mt-2 text-sm font-medium leading-relaxed text-slate-600">{item.body}</p>
+            </div>
+          ))}
+        </div>
+      ),
+    },
+    {
+      id: 'phone-plan-think-about-it',
+      title: 'Think about it',
+      summary: 'The best plan matches how much you really use your phone.',
+      content: (
+        <div className="pt-4">
+          <p className="text-sm font-medium leading-relaxed text-emerald-900/80">
+            The best plan is not always the cheapest one. A good plan matches how much you really use your phone.
+          </p>
+          <p className="mt-4 rounded-xl bg-white px-4 py-3 text-sm font-black text-slate-800 shadow-sm">
+            Would you rather save money each month, or pay more for more data and speed?
+          </p>
+        </div>
+      ),
+    },
+  ];
+
   return (
-    <AnimatePresence>
-      {isOpen && (
-        <motion.div
-          className="fixed inset-0 z-[250] flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          onClick={onClose}
-        >
-          <motion.div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="phone-plan-lesson-title"
-            className="max-h-[90vh] w-full max-w-3xl overflow-hidden rounded-3xl bg-white shadow-2xl"
-            initial={{ opacity: 0, y: 24, scale: 0.96 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 16, scale: 0.96 }}
-            transition={{ duration: 0.2 }}
-            onClick={(event) => event.stopPropagation()}
-          >
-            <div className="flex items-start justify-between gap-4 bg-[#3372B2] px-6 py-5 text-white">
-              <div>
-                <p className="text-xs font-black uppercase tracking-widest text-blue-100">Phone Plan Mini Lesson</p>
-                <h2 id="phone-plan-lesson-title" className="mt-1 text-2xl font-black">Quick Lesson: How Phone Plans Work</h2>
-              </div>
-              <button
-                onClick={onClose}
-                className="rounded-full bg-white/10 p-2 transition-colors hover:bg-white/20"
-                aria-label="Close quick lesson"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <div className="max-h-[65vh] overflow-y-auto p-6 sm:p-8">
-              <div className="space-y-6">
-                <section className="rounded-2xl border border-slate-100 bg-slate-50 p-5">
-                  <h3 className="text-lg font-black text-[#3372B2]">What is a phone plan?</h3>
-                  <p className="mt-2 text-sm font-medium leading-relaxed text-slate-600">
-                    A phone plan is what you pay for each month so your phone can call, text, and use the internet.
-                  </p>
-                </section>
-
-                <section className="space-y-3">
-                  <h3 className="text-lg font-black text-[#3372B2]">What are you paying for?</h3>
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                    {explanationBlocks.map((item) => (
-                      <div key={item.title} className="rounded-2xl border border-blue-100 bg-blue-50/70 p-4">
-                        <p className="font-black text-[#3372B2]">{item.title}</p>
-                        <p className="mt-2 text-sm font-medium leading-relaxed text-slate-600">{item.body}</p>
-                      </div>
-                    ))}
-                  </div>
-                </section>
-
-                <section className="rounded-2xl border border-orange-100 bg-orange-50 p-5">
-                  <h3 className="text-lg font-black text-orange-600">What does "unlimited" mean?</h3>
-                  <p className="mt-2 text-sm font-medium leading-relaxed text-orange-900/80">
-                    Unlimited does not always mean unlimited fast data. Some phone plans may slow down after you use a certain amount.
-                  </p>
-                </section>
-
-                <section className="space-y-3">
-                  <h3 className="text-lg font-black text-[#3372B2]">Which type of user are you?</h3>
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                    {userTypes.map((item) => (
-                      <div key={item.title} className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
-                        <p className="font-black text-slate-900">{item.title}</p>
-                        <p className="mt-2 text-sm font-medium leading-relaxed text-slate-600">{item.body}</p>
-                      </div>
-                    ))}
-                  </div>
-                </section>
-
-                <section className="rounded-2xl border border-emerald-100 bg-emerald-50 p-5">
-                  <h3 className="text-lg font-black text-emerald-700">Think about it</h3>
-                  <p className="mt-2 text-sm font-medium leading-relaxed text-emerald-900/80">
-                    The best plan is not always the cheapest one. A good plan matches how much you really use your phone.
-                  </p>
-                  <p className="mt-4 rounded-xl bg-white px-4 py-3 text-sm font-black text-slate-800 shadow-sm">
-                    Would you rather save money each month, or pay more for more data and speed?
-                  </p>
-                </section>
-              </div>
-            </div>
-
-            <div className="border-t border-slate-100 bg-slate-50 px-6 py-4">
-              <button
-                onClick={onClose}
-                className="w-full rounded-xl bg-orange-500 px-5 py-3 font-bold text-white shadow-lg shadow-orange-100 transition-all hover:bg-orange-600 active:scale-[0.99]"
-              >
-                Back to Plans
-              </button>
-            </div>
-          </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>
+    <ModalShell
+      isOpen={isOpen}
+      onClose={onClose}
+      eyebrow="Phone Plan Mini Lesson"
+      title="Quick Lesson: How Phone Plans Work"
+      labelledBy="phone-plan-lesson-title"
+      footerLabel="Back to Plans"
+      maxWidthClassName="max-w-3xl"
+      headerClassName="bg-[#3372B2] text-white"
+      titleClassName="mt-1 text-2xl font-black"
+      closeButtonClassName="rounded-full bg-white/10 p-2 transition-colors hover:bg-white/20"
+    >
+      <LessonAccordion items={lessonItems} />
+    </ModalShell>
   );
 }

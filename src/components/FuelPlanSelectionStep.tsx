@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Car, Check, Info } from 'lucide-react';
 import { BeforeYouChooseCallout } from './BeforeYouChooseCallout';
+import { LessonAccordion, LessonAccordionItem } from './LessonAccordion';
 import { ModalShell } from './ModalShell';
 import { FUEL_LESSON_CONTENT } from '../content/fuelLessons';
 import { FuelPriceEnvironment, Option, QuizState } from '../types';
@@ -179,6 +180,63 @@ export function FuelPlanSelectionStep({
 
 function FuelLessonModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   const { sections } = FUEL_LESSON_CONTENT;
+  const lessonItems: LessonAccordionItem[] = [
+    {
+      id: 'fuel-why-matters',
+      title: sections.whyFuelMatters.title,
+      summary: 'Fuel is a monthly cost that changes based on how often you drive.',
+      content: (
+        <p className="pt-4 text-sm font-medium leading-relaxed text-slate-600">
+          {sections.whyFuelMatters.body}
+        </p>
+      ),
+    },
+    {
+      id: 'fuel-why-prices-change',
+      title: sections.whyPricesChange.title,
+      summary: 'Prices can go up or down for reasons outside your control.',
+      content: (
+        <p className="pt-4 text-sm font-medium leading-relaxed text-slate-600">
+          {sections.whyPricesChange.body}
+        </p>
+      ),
+    },
+    {
+      id: 'fuel-gas-vehicles',
+      title: sections.gasVehicles.title,
+      summary: 'Gas costs depend on distance, prices, and how efficient the vehicle is.',
+      content: (
+        <p className="pt-4 text-sm font-medium leading-relaxed text-orange-900/80">
+          {sections.gasVehicles.body}
+        </p>
+      ),
+    },
+    {
+      id: 'fuel-electric-vehicles',
+      title: sections.electricVehicles.title,
+      summary: 'EV charging is often lower, but it still belongs in the budget.',
+      content: (
+        <p className="pt-4 text-sm font-medium leading-relaxed text-emerald-900/80">
+          {sections.electricVehicles.body}
+        </p>
+      ),
+    },
+    {
+      id: 'fuel-think-about-it',
+      title: sections.thinkAboutIt.title,
+      summary: 'Driving habits can change fuel costs a lot more than people expect.',
+      content: (
+        <div className="pt-4">
+          <p className="text-sm font-medium leading-relaxed text-slate-600">
+            {sections.thinkAboutIt.body}
+          </p>
+          <p className="mt-4 rounded-xl bg-white px-4 py-3 text-sm font-black text-slate-800 shadow-sm">
+            {sections.thinkAboutIt.question}
+          </p>
+        </div>
+      ),
+    },
+  ];
 
   return (
     <ModalShell
@@ -193,46 +251,7 @@ function FuelLessonModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => 
       titleClassName="mt-1 text-2xl font-black"
       closeButtonClassName="rounded-full bg-white/10 p-2 transition-colors hover:bg-white/20"
     >
-      <div className="space-y-6">
-        <section className="rounded-2xl border border-slate-100 bg-slate-50 p-5">
-          <h3 className="text-lg font-black text-[#3372B2]">{sections.whyFuelMatters.title}</h3>
-          <p className="mt-2 text-sm font-medium leading-relaxed text-slate-600">
-            {sections.whyFuelMatters.body}
-          </p>
-        </section>
-
-        <section className="rounded-2xl border border-blue-100 bg-blue-50/70 p-5">
-          <h3 className="text-lg font-black text-[#3372B2]">{sections.whyPricesChange.title}</h3>
-          <p className="mt-2 text-sm font-medium leading-relaxed text-slate-600">
-            {sections.whyPricesChange.body}
-          </p>
-        </section>
-
-        <section className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <div className="rounded-2xl border border-orange-100 bg-orange-50 p-5">
-            <h3 className="text-lg font-black text-orange-600">{sections.gasVehicles.title}</h3>
-            <p className="mt-2 text-sm font-medium leading-relaxed text-orange-900/80">
-              {sections.gasVehicles.body}
-            </p>
-          </div>
-          <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-5">
-            <h3 className="text-lg font-black text-emerald-700">{sections.electricVehicles.title}</h3>
-            <p className="mt-2 text-sm font-medium leading-relaxed text-emerald-900/80">
-              {sections.electricVehicles.body}
-            </p>
-          </div>
-        </section>
-
-        <section className="rounded-2xl border border-blue-100 bg-blue-50/70 p-5">
-          <h3 className="text-lg font-black text-[#3372B2]">{sections.thinkAboutIt.title}</h3>
-          <p className="mt-2 text-sm font-medium leading-relaxed text-slate-600">
-            {sections.thinkAboutIt.body}
-          </p>
-          <p className="mt-4 rounded-xl bg-white px-4 py-3 text-sm font-black text-slate-800 shadow-sm">
-            {sections.thinkAboutIt.question}
-          </p>
-        </section>
-      </div>
+      <LessonAccordion items={lessonItems} />
     </ModalShell>
   );
 }
