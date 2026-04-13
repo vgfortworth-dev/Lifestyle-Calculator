@@ -25,7 +25,6 @@ import {
   UTILITY_OPTIONS,
   STREAMING_OPTIONS,
   SUBSCRIPTION_OPTIONS,
-  FOOD_OPTIONS,
   TRANSPORT_OPTIONS,
   INSURANCE_OPTIONS,
   OTHER_OPTIONS,
@@ -45,6 +44,7 @@ import { CareerSuggestion } from './services/gemini';
 import { useCalculatorData } from './hooks/useCalculatorData';
 import AdminPage from './pages/AdminPage';
 import { CLOTHING_GAME_ITEMS } from './data/clothingItems';
+import { GROCERY_GAME_ITEMS, LEGACY_FOOD_PACKAGE_STARTERS } from './data/groceryItems';
 
 import { ClothingGameStep } from './components/ClothingGameStep';
 import { CareerMatchCard } from './components/careers/CareerMatchCard';
@@ -72,6 +72,7 @@ import { RiasecSummary } from './types/riasec';
 import { rankCareerMatches } from './lib/rankCareerMatches';
 import { getCareerSuggestionKey, getStableCareerSuggestions } from './lib/careerSuggestionCache';
 import { getTotalMonthlyClothingCost, getTotalSelectedItemCount } from './lib/clothingBudget';
+import { getTotalGroceryItemCount, getTotalMonthlyGroceryCost } from './lib/groceryBudget';
 
 // App-owned defaults and display tokens.
 const INITIAL_STATE: QuizState = {
@@ -86,6 +87,7 @@ const INITIAL_STATE: QuizState = {
     streaming: [],
     subscriptions: [],
     food: '',
+    foodCart: {},
     transportation: [],
     fuel: '',
     fuelPriceEnvironment: 'average',
@@ -125,10 +127,35 @@ const COLORS = {
   headerBlue: '#3372B2',
   valueTeal: '#2D9B8E',
   selectedGreen: '#10B981',
-  borderSlate: '#E2E8F0'
+  borderSlate: '#E2E8F0',
+  brandOrange: '#F97316',
 };
 
 const USE_SUPABASE = true;
+
+function LocationIcon({ region }: { region: { name: string; emoji?: string; image?: string } }) {
+  const [iconFailed, setIconFailed] = useState(false);
+
+  if (region.image && !iconFailed) {
+    return (
+      <img
+        src={region.image}
+        alt={`${region.name} icon`}
+        className="h-8 w-8 shrink-0 object-contain"
+        onError={() => {
+          console.error('Failed to load location icon:', region.name, region.image);
+          setIconFailed(true);
+        }}
+      />
+    );
+  }
+
+  return (
+    <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center text-2xl leading-none">
+      {region.emoji}
+    </span>
+  );
+}
 const REQUIRED_INDEPENDENT_UTILITY_IDS = ['water', 'trash'];
 const RESULTS_GROUPED_CATEGORIES = ['Streaming', 'Subscriptions', 'Utilities', 'Insurance', 'Other'];
 
@@ -176,6 +203,34 @@ function getFuelOptionsForType(type: FuelPlanType): Option[] {
   if (type === 'ev') return EV_FUEL_OPTIONS;
   if (type === 'gas') return GAS_FUEL_OPTIONS;
   return [];
+}
+
+function buildLegacyFoodCart(legacyFoodId: string) {
+  const starterItems = LEGACY_FOOD_PACKAGE_STARTERS[legacyFoodId];
+  if (!starterItems) return {};
+
+  return starterItems.reduce<QuizState['selections']['foodCart']>((cart, starter) => {
+    const item = GROCERY_GAME_ITEMS.find((candidate) => candidate.id === starter.id);
+    if (!item) return cart;
+
+    cart[item.id] = {
+      id: item.id,
+      name: item.name,
+      category: item.category,
+      price: item.itemPrice,
+      quantity: starter.quantity,
+      description: item.description,
+      image: item.imageUrl,
+      productType: item.productType,
+      quality: item.quality,
+      quantityLabel: item.quantity,
+      shopperTags: item.shopperTags,
+      isBudget: item.isBudget,
+      isPremium: item.isPremium,
+      isAllergyFriendly: item.isAllergyFriendly,
+    };
+    return cart;
+  }, {});
 }
 
 function getHistoryRiasecSummary(): RiasecSummary | null {
@@ -252,6 +307,20 @@ export default function App() {
       ) {
         migrated.selections.clothingCloset = {};
       }
+      if (
+        !migrated.selections.foodCart ||
+        Array.isArray(migrated.selections.foodCart) ||
+        typeof migrated.selections.foodCart !== 'object'
+      ) {
+        migrated.selections.foodCart = {};
+      }
+      if (
+        Object.keys(migrated.selections.foodCart).length === 0 &&
+        typeof migrated.selections.food === 'string' &&
+        migrated.selections.food
+      ) {
+        migrated.selections.foodCart = buildLegacyFoodCart(migrated.selections.food);
+      }
       if ('clothing' in migrated.selections) {
         delete migrated.selections.clothing;
       }
@@ -263,7 +332,19 @@ export default function App() {
   });
 
   // Derived option data
-  const activeRegions = USE_SUPABASE && regions.length ? regions : REGIONS;
+  const activeRegions = useMemo(() => {
+    const regionSource = USE_SUPABASE && regions.length ? regions : REGIONS;
+
+    return regionSource.map((region: any) => {
+      const fallbackRegion = REGIONS.find((entry) => entry.id === region.id);
+
+      return {
+        ...region,
+        emoji: region.emoji ?? fallbackRegion?.emoji,
+        image: region.image ?? fallbackRegion?.image,
+      };
+    });
+  }, [regions]);
   const activeInternetOptions = USE_SUPABASE && internetOptions.length ? internetOptions : INTERNET_OPTIONS;
   const activeUtilityOptions = USE_SUPABASE && utilityOptions.length ? utilityOptions : UTILITY_OPTIONS;
   const activeStreamingOptions = USE_SUPABASE && streamingOptions.length ? streamingOptions : STREAMING_OPTIONS;
@@ -422,8 +503,7 @@ export default function App() {
     });
 
     // Food
-    const food = FOOD_OPTIONS.find(o => o.id === state.selections.food);
-    if (food) total += food.monthlyCost * multiplier;
+    total += getTotalMonthlyGroceryCost(state.selections.foodCart) * multiplier;
 
     // Transportation
     state.selections.transportation.forEach(id => {
@@ -516,6 +596,17 @@ export default function App() {
       selections: {
         ...prev.selections,
         clothingCloset,
+      },
+    }));
+  };
+
+  const handleFoodCartChange = (foodCart: QuizState['selections']['foodCart']) => {
+    setState(prev => ({
+      ...prev,
+      selections: {
+        ...prev.selections,
+        foodCart,
+        food: '',
       },
     }));
   };
@@ -629,13 +720,16 @@ export default function App() {
                   <div className="flex justify-between items-start">
                     <div>
                       <h3 className="font-bold text-xl text-slate-900 flex items-center gap-2">
-                        <span className="text-2xl">{region.emoji}</span> {region.majorCity}
+                        <LocationIcon region={region} />
+                        <span>{region.majorCity}</span>
                       </h3>
                       <p className="text-slate-500 text-sm font-medium uppercase tracking-wide">
                         {region.name}
                       </p>
                     </div>
-                    {state.regionId === region.id && <CheckCircle2 className="w-6 h-6" style={{ color: COLORS.selectedGreen }} />}
+                    <div className="shrink-0">
+                      {state.regionId === region.id && <CheckCircle2 className="w-6 h-6" style={{ color: COLORS.selectedGreen }} />}
+                    </div>
                   </div>
                 </button>
               ))}
@@ -742,10 +836,9 @@ export default function App() {
         return (
           <QuizWrapper colors={COLORS} title="Food & Groceries" description="How do you plan to eat?">
             <GrocerySelectionStep
-              options={FOOD_OPTIONS}
-              category="food"
-              state={state}
-              onSelect={handleSelection}
+              groceryItems={GROCERY_GAME_ITEMS}
+              groceryCart={state.selections.foodCart}
+              onCartChange={handleFoodCartChange}
               multiplier={currentRegion.costMultiplier}
             />
           </QuizWrapper>
@@ -1805,7 +1898,16 @@ function ResultsStep({ state, monthlyTotal, annualTotal, recommendedSalary, onRe
     state.selections.streaming.forEach((id: string) => add(streamingOptions.find((o: any) => o.id === id), 'Streaming'));
     state.selections.subscriptions.forEach((id: string) => add(subscriptionOptions.find((o: any) => o.id === id), 'Subscriptions'));
     
-    add(FOOD_OPTIONS.find(o => o.id === state.selections.food), 'Food', m);
+    const groceryItemCount = getTotalGroceryItemCount(state.selections.foodCart);
+    const groceryMonthlyCost = getTotalMonthlyGroceryCost(state.selections.foodCart) * m;
+    if (groceryItemCount > 0 && groceryMonthlyCost > 0) {
+      items.push({
+        name: `Grocery Cart (${groceryItemCount})`,
+        cost: groceryMonthlyCost,
+        category: 'Food',
+        emoji: '🛒',
+      });
+    }
     state.selections.transportation.forEach((id: string) => {
       const opt = transportOptions.find((o: any) => o.id === id) || getTransportationOption(id);
       if (opt) {
@@ -1924,7 +2026,7 @@ function ResultsStep({ state, monthlyTotal, annualTotal, recommendedSalary, onRe
           <CheckCircle2 className="w-12 h-12" />
         </motion.div>
         <h2 className="text-5xl font-black text-slate-900">Your Future Awaits!</h2>
-        <p className="text-xl text-slate-500 max-w-2xl mx-auto">Based on your choices in <span className="text-slate-900 font-bold">{currentRegion.emoji} {currentRegion.name}</span>, here is what you'll need to earn.</p>
+        <p className="text-xl text-slate-500 max-w-2xl mx-auto">Based on your choices in <span className="text-slate-900 font-bold">{currentRegion.name}</span>, here is what you'll need to earn.</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -2158,3 +2260,5 @@ function ResultsStep({ state, monthlyTotal, annualTotal, recommendedSalary, onRe
     </div>
   );
 }
+
+

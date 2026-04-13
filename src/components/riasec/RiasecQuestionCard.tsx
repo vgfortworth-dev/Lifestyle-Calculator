@@ -20,6 +20,19 @@ export function RiasecQuestionCard({ question, selectedValue, onAnswer }: Riasec
   const [imageLoaded, setImageLoaded] = useState(false);
   const showImage = !!question.imageUrl && !imageFailed;
 
+  const handleImageError = () => {
+    if (import.meta.env.DEV) {
+      console.warn('[RIASEC] Question image failed to load', {
+        display_order: question.displayOrder || null,
+        prompt: question.prompt,
+        image_path: question.imagePath || null,
+        cloudinary_public_id: question.imagePublicId || null,
+        resolvedImageSrc: question.imageUrl || null,
+      });
+    }
+    setImageFailed(true);
+  };
+
   useEffect(() => {
     setImageFailed(false);
     setImageLoaded(false);
@@ -27,7 +40,7 @@ export function RiasecQuestionCard({ question, selectedValue, onAnswer }: Riasec
 
   return (
     <div className="space-y-6">
-      <div className="relative h-[240px] overflow-hidden rounded-3xl border border-slate-100 bg-white shadow-xl sm:h-[300px]">
+      <div className="relative h-[300px] overflow-hidden rounded-3xl border border-slate-100 bg-white shadow-xl sm:h-[420px] lg:h-[480px]">
         {!imageLoaded && (
           <div className="absolute inset-0 animate-pulse bg-gradient-to-br from-slate-100 via-slate-50 to-slate-100" />
         )}
@@ -41,7 +54,7 @@ export function RiasecQuestionCard({ question, selectedValue, onAnswer }: Riasec
               decoding="async"
               fetchPriority="high"
               onLoad={() => setImageLoaded(true)}
-              onError={() => setImageFailed(true)}
+              onError={handleImageError}
             />
             <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-slate-950/10 to-transparent" />
           </>
@@ -49,9 +62,16 @@ export function RiasecQuestionCard({ question, selectedValue, onAnswer }: Riasec
           <div className="flex h-full w-full items-center justify-center bg-slate-100 text-slate-400">
             <div className="flex flex-col items-center gap-3 text-center">
               <ImageOff className="h-10 w-10" />
-              <p className="text-xs font-black uppercase tracking-widest">
-                {question.imagePath ? 'Image unavailable' : 'Question image'}
-              </p>
+              <div className="space-y-1">
+                <p className="text-xs font-black uppercase tracking-widest">
+                  {question.imagePath ? 'Image unavailable' : 'Question image'}
+                </p>
+                {question.imagePath && (
+                  <p className="max-w-xs text-sm font-medium leading-relaxed text-slate-500">
+                    You can still answer this question normally.
+                  </p>
+                )}
+              </div>
             </div>
           </div>
         )}

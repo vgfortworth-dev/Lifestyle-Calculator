@@ -1,21 +1,21 @@
 import { supabase } from './supabase';
 import { RIASEC_QUESTIONS } from './riasecQuestions';
 import { RiasecCategory, RiasecQuestion } from '../types/riasec';
+import { buildCloudinaryImageUrl } from './cloudinary';
 
 const RIASEC_CATEGORIES: RiasecCategory[] = ['R', 'I', 'A', 'S', 'E', 'C'];
-const RIASEC_STORAGE_BUCKET = 'riasec-question-images';
-const RIASEC_IMAGE_WIDTH = 1200;
-const RIASEC_IMAGE_QUALITY = 70;
 
 type RiasecQuestionRow = {
   id: string | number;
   category: string;
+  display_order?: number | null;
   riasec_category?: string | null;
   riasec_code?: string | null;
   prompt?: string | null;
   question_text?: string | null;
   question?: string | null;
   text?: string | null;
+  cloudinary_public_id?: string | null;
   image_path?: string | null;
   alt_text?: string | null;
 };
@@ -41,29 +41,42 @@ function normalizeCategory(value: string | null | undefined): RiasecCategory | n
   return categoryMap[normalized] || null;
 }
 
-function buildQuestionImageUrl(imagePath: string | null | undefined) {
-  if (!imagePath) return null;
-  if (/^https?:\/\//i.test(imagePath)) return imagePath;
-
-  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-  if (!supabaseUrl) return null;
-
-  const normalizedPath = imagePath.replace(/^\/+/, '').split('/').map(encodeURIComponent).join('/');
-  return `${supabaseUrl}/storage/v1/render/image/public/${RIASEC_STORAGE_BUCKET}/${normalizedPath}?width=${RIASEC_IMAGE_WIDTH}&quality=${RIASEC_IMAGE_QUALITY}&resize=cover`;
+function getQuestionImageIdentifier(row: RiasecQuestionRow) {
+  return row.cloudinary_public_id || row.image_path || null;
 }
 
 function mapQuestionRow(row: RiasecQuestionRow): RiasecQuestion | null {
   const category = normalizeCategory(row.category || row.riasec_category || row.riasec_code);
   const prompt = row.prompt || row.question_text || row.question || row.text;
+  const imageIdentifier = getQuestionImageIdentifier(row);
+  const resolvedImageUrl = buildCloudinaryImageUrl(imageIdentifier, {
+    width: 1400,
+    height: 1200,
+    crop: 'fill',
+    gravity: 'auto',
+  });
 
   if (!category || !prompt) return null;
+
+  if (import.meta.env.DEV && imageIdentifier) {
+    console.info('[RIASEC] Question image resolution', {
+      display_order: row.display_order || null,
+      prompt,
+      image_path: row.image_path || null,
+      cloudinary_public_id: row.cloudinary_public_id || null,
+      resolvedImageSrc: resolvedImageUrl,
+      cloudName: import.meta.env.VITE_CLOUDINARY_CLOUD_NAME || null,
+    });
+  }
 
   return {
     id: String(row.id),
     category,
     prompt,
-    imagePath: row.image_path || null,
-    imageUrl: buildQuestionImageUrl(row.image_path),
+    displayOrder: row.display_order || null,
+    imagePublicId: imageIdentifier,
+    imagePath: imageIdentifier,
+    imageUrl: resolvedImageUrl,
     altText: row.alt_text || null,
   };
 }

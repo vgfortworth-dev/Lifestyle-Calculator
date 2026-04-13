@@ -19,6 +19,8 @@ export type RiasecQuestion = {
   id: string;
   category: RiasecCategory;
   prompt: string;
+  displayOrder?: number | null;
+  imagePublicId?: string | null;
   imagePath?: string | null;
   imageUrl?: string | null;
   altText?: string | null;

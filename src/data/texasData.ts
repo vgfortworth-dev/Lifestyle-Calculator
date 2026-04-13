@@ -1,22 +1,22 @@
 ﻿import { Region, Option } from '../types';
 
 export const REGIONS: Region[] = [
-  { id: 'alamo', name: 'Alamo', majorCity: 'San Antonio', costMultiplier: 1.05, emoji: '🌮' },
+  { id: 'alamo', name: 'Alamo', majorCity: 'San Antonio', costMultiplier: 1.05, emoji: '🏛️' },
   { id: 'brazos', name: 'Brazos Valley', majorCity: 'College Station', costMultiplier: 0.98, emoji: '🏈' },
   { id: 'cameron', name: 'Cameron County', majorCity: 'Brownsville', costMultiplier: 0.8, emoji: '🚀' },
-  { id: 'capital', name: 'Capital Area', majorCity: 'Austin', costMultiplier: 1.4, emoji: '🎸' },
-  { id: 'central-texas', name: 'Central Texas', majorCity: 'Killeen', costMultiplier: 0.95, emoji: '🎖️' },
-  { id: 'coastal-bend', name: 'Coastal Bend', majorCity: 'Corpus Christi', costMultiplier: 0.95, emoji: '🏖️' },
+  { id: 'capital', name: 'Capital Area', majorCity: 'Austin', costMultiplier: 1.4, emoji: '🎵' },
+  { id: 'central-texas', name: 'Central Texas', majorCity: 'Killeen', costMultiplier: 0.95, emoji: '🛡️' },
+  { id: 'coastal-bend', name: 'Coastal Bend', majorCity: 'Corpus Christi', costMultiplier: 0.95, emoji: '🌊', image: '/images/locations/corpus-christi.svg' },
   { id: 'concho', name: 'Concho Valley', majorCity: 'San Angelo', costMultiplier: 0.88, emoji: '🐑' },
-  { id: 'dallas', name: 'Dallas', majorCity: 'Dallas', costMultiplier: 1.25, emoji: '🏙️' },
-  { id: 'deep-east', name: 'Deep East Texas', majorCity: 'Lufkin', costMultiplier: 0.82, emoji: '🦌' },
+  { id: 'dallas', name: 'Dallas', majorCity: 'Dallas', costMultiplier: 1.25, emoji: '🏙️', image: '/images/locations/dallas.svg' },
+  { id: 'deep-east', name: 'Deep East Texas', majorCity: 'Lufkin', costMultiplier: 0.82, emoji: '🦌', image: '/images/locations/lufkin.svg' },
   { id: 'east-texas', name: 'East Texas', majorCity: 'Tyler', costMultiplier: 0.9, emoji: '🌹' },
   { id: 'golden-crescent', name: 'Golden Crescent', majorCity: 'Victoria', costMultiplier: 0.9, emoji: '🐚' },
   { id: 'gulf-coast', name: 'Gulf Coast', majorCity: 'Houston', costMultiplier: 1.2, emoji: '🚀' },
   { id: 'heart-texas', name: 'Heart of Texas', majorCity: 'Waco', costMultiplier: 0.93, emoji: '❤️' },
   { id: 'lower-rio', name: 'Lower Rio Grande', majorCity: 'McAllen', costMultiplier: 0.82, emoji: '🌴' },
   { id: 'middle-rio', name: 'Middle Rio Grande', majorCity: 'Eagle Pass', costMultiplier: 0.8, emoji: '🦅' },
-  { id: 'north-central', name: 'North Central', majorCity: 'Arlington', costMultiplier: 1.1, emoji: '🎢' },
+  { id: 'north-central', name: 'North Central', majorCity: 'Arlington', costMultiplier: 1.1, emoji: '🎡' },
   { id: 'northeast', name: 'Northeast', majorCity: 'Texarkana', costMultiplier: 0.85, emoji: '🌲' },
   { id: 'north-texas', name: 'North Texas', majorCity: 'Wichita Falls', costMultiplier: 0.88, emoji: '🌪️' },
   { id: 'panhandle', name: 'Panhandle', majorCity: 'Amarillo', costMultiplier: 0.9, emoji: '🤠' },
@@ -25,10 +25,10 @@ export const REGIONS: Region[] = [
   { id: 'southeast', name: 'South East Texas', majorCity: 'Beaumont', costMultiplier: 0.88, emoji: '🚢' },
   { id: 'south-plains', name: 'South Plains', majorCity: 'Lubbock', costMultiplier: 0.92, emoji: '🌾' },
   { id: 'south-texas', name: 'South Texas', majorCity: 'Laredo', costMultiplier: 0.85, emoji: '🌶️' },
-  { id: 'tarrant', name: 'Tarrant County', majorCity: 'Fort Worth', costMultiplier: 1.15, emoji: '🐂' },
+  { id: 'tarrant', name: 'Tarrant County', majorCity: 'Fort Worth', costMultiplier: 1.15, emoji: '🐂', image: '/images/locations/fort-worth.svg' },
   { id: 'texoma', name: 'Texoma', majorCity: 'Sherman', costMultiplier: 0.92, emoji: '🎣' },
-  { id: 'upper-rio', name: 'Upper Rio Grande', majorCity: 'El Paso', costMultiplier: 0.95, emoji: '⛰️' },
-  { id: 'west-central', name: 'West Central', majorCity: 'Abilene', costMultiplier: 0.87, emoji: '🌵' },
+  { id: 'upper-rio', name: 'Upper Rio Grande', majorCity: 'El Paso', costMultiplier: 0.95, emoji: '⛰️', image: '/images/locations/el-paso.svg' },
+  { id: 'west-central', name: 'West Central', majorCity: 'Abilene', costMultiplier: 0.87, emoji: '🌵', image: '/images/locations/abilene.svg' },
 ];
 
 export const HOUSING_OPTIONS: Option[] = [

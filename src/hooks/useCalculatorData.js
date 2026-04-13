@@ -1,6 +1,40 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 
+const REGION_EMOJI_BY_KEY = {
+  alamo: '🏛️',
+  football: '🏈',
+  rocket: '🚀',
+  music: '🎵',
+  badge: '🛡️',
+  waves: '🌊',
+  sheep: '🐑',
+  city: '🏙️',
+  deer: '🦌',
+  rose: '🌹',
+  shell: '🐚',
+  heart: '❤️',
+  palm: '🌴',
+  eagle: '🦅',
+  fair: '🎡',
+  pine: '🌲',
+  tornado: '🌪️',
+  hat: '🤠',
+  oil: '🛢️',
+  baseball: '⚾',
+  ship: '🚢',
+  wheat: '🌾',
+  pepper: '🌶️',
+  bull: '🐂',
+  fishing: '🎣',
+  mountain: '⛰️',
+  cactus: '🌵',
+};
+
+function getRegionEmoji(row) {
+  return row.emoji || REGION_EMOJI_BY_KEY[row.icon_key] || REGION_EMOJI_BY_KEY[row.id] || '📍';
+}
+
 export function useCalculatorData() {
   const [regions, setRegions] = useState([]);
   const [internetOptions, setInternetOptions] = useState([]);
@@ -91,7 +125,7 @@ export function useCalculatorData() {
             id: row.id,
             name: row.name,
             majorCity: row.major_city,
-            emoji: row.emoji,
+            emoji: getRegionEmoji(row),
             costMultiplier: Number(row.cost_multiplier),
             sort_order: row.sort_order,
           }))

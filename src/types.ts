@@ -5,6 +5,7 @@ export type Region = {
   majorCity: string;
   costMultiplier: number; // Relative to a baseline
   emoji?: string;
+  image?: string;
 };
 
 export type Option = {
@@ -43,6 +44,27 @@ export type ClothingClosetEntry = {
 
 export type ClothingClosetState = Record<string, ClothingClosetEntry>;
 
+export type GroceryCartEntry = {
+  id: string;
+  name: string;
+  category: string;
+  price: number;
+  quantity: number;
+  description?: string;
+  image?: string;
+  storeTier?: string;
+  productType?: string;
+  quality?: string;
+  store?: string;
+  quantityLabel?: string;
+  shopperTags?: string[];
+  isAllergyFriendly?: boolean;
+  isBudget?: boolean;
+  isPremium?: boolean;
+};
+
+export type GroceryCartState = Record<string, GroceryCartEntry>;
+
 export type QuizState = {
   currentStep: number;
   regionId: string;
@@ -55,6 +77,7 @@ export type QuizState = {
     streaming: string[];
     subscriptions: string[];
     food: string;
+    foodCart: GroceryCartState;
     transportation: string[];
     fuel: string;
     fuelPriceEnvironment: FuelPriceEnvironment;
