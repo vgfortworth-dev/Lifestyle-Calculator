@@ -97,6 +97,27 @@ const INITIAL_STATE: QuizState = {
   },
 };
 
+const MULTI_SELECT_KEYS = [
+  'utilities',
+  'streaming',
+  'subscriptions',
+  'transportation',
+  'insurance',
+  'other',
+] as const;
+
+function normalizeMultiSelect(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value.filter((item): item is string => typeof item === 'string');
+  }
+
+  if (typeof value === 'string') {
+    return value ? [value] : [];
+  }
+
+  return [];
+}
+
 const CATEGORY_EMOJIS: Record<string, string> = {
   'Shopping': '🛒',
   'Gaming': '🎮',
@@ -277,12 +298,10 @@ export default function App() {
         },
       };
 
-      // Migration: ensure transportation is an array
-      if (typeof migrated.selections.transportation === 'string') {
-        migrated.selections.transportation = migrated.selections.transportation
-          ? [migrated.selections.transportation]
-          : [];
-      }
+      MULTI_SELECT_KEYS.forEach((key) => {
+        migrated.selections[key] = normalizeMultiSelect(migrated.selections[key]);
+      });
+
       if (migrated.selections.phone === 'keep-current') {
         migrated.selections.phone = 'keep-phone';
       }
@@ -2260,5 +2279,3 @@ function ResultsStep({ state, monthlyTotal, annualTotal, recommendedSalary, onRe
     </div>
   );
 }
-
-
