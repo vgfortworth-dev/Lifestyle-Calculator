@@ -43,6 +43,27 @@ const INITIAL_STATE: QuizState = {
   },
 };
 
+const MULTI_SELECT_KEYS = [
+  'utilities',
+  'streaming',
+  'subscriptions',
+  'transportation',
+  'insurance',
+  'other',
+] as const;
+
+function normalizeMultiSelect(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value.filter((item): item is string => typeof item === 'string');
+  }
+
+  if (typeof value === 'string') {
+    return value ? [value] : [];
+  }
+
+  return [];
+}
+
 const CATEGORY_EMOJIS: Record<string, string> = {
   'Shopping': '🛒',
   'Gaming': '🎮',
@@ -654,32 +675,68 @@ export default function App() {
   const [state, setState] = useState<QuizState>(() => {
     const saved = localStorage.getItem('lifestyle_calculator_state');
     if (!saved) return INITIAL_STATE;
-    
-    const parsed = JSON.parse(saved);
-    // Migration: ensure transportation is an array
-    if (typeof parsed.selections.transportation === 'string') {
-      parsed.selections.transportation = parsed.selections.transportation 
-        ? [parsed.selections.transportation] 
-        : [];
-    }
-    if (parsed.selections.phone === 'keep-current') {
-      parsed.selections.phone = 'keep-phone';
-    }
-    if (parsed.selections.phone === 'new-21') {
-      parsed.selections.phone = 'new-21-256';
-    }
-    if (typeof parsed.selections.fuel !== 'string') {
-      parsed.selections.fuel = '';
-    }
-    parsed.selections.fuelPriceEnvironment = getFuelPriceEnvironment(parsed.selections.fuelPriceEnvironment);
-    if (Array.isArray(parsed.selections.insurance)) {
-      parsed.selections.insurance = parsed.selections.insurance.map((id: string) => {
-        if (id === 'dental-standard') return 'dental-low';
-        if (id === 'vision-standard') return 'vision-low';
-        return id;
+
+    try {
+      const parsed = JSON.parse(saved);
+      const migrated = {
+        ...INITIAL_STATE,
+        ...parsed,
+        selections: {
+          ...INITIAL_STATE.selections,
+          ...(parsed.selections || {}),
+        },
+      };
+
+      MULTI_SELECT_KEYS.forEach((key) => {
+        migrated.selections[key] = normalizeMultiSelect(migrated.selections[key]);
       });
+
+      if (migrated.selections.phone === 'keep-current') {
+        migrated.selections.phone = 'keep-phone';
+      }
+      if (migrated.selections.phone === 'new-21') {
+        migrated.selections.phone = 'new-21-256';
+      }
+      if (typeof migrated.selections.fuel !== 'string') {
+        migrated.selections.fuel = '';
+      }
+      migrated.selections.fuelPriceEnvironment = getFuelPriceEnvironment(migrated.selections.fuelPriceEnvironment);
+      if (Array.isArray(migrated.selections.insurance)) {
+        migrated.selections.insurance = migrated.selections.insurance.map((id: string) => {
+          if (id === 'dental-standard') return 'dental-low';
+          if (id === 'vision-standard') return 'vision-low';
+          return id;
+        });
+      }
+      if (
+        !migrated.selections.clothingCloset ||
+        Array.isArray(migrated.selections.clothingCloset) ||
+        typeof migrated.selections.clothingCloset !== 'object'
+      ) {
+        migrated.selections.clothingCloset = {};
+      }
+      if (
+        !migrated.selections.foodCart ||
+        Array.isArray(migrated.selections.foodCart) ||
+        typeof migrated.selections.foodCart !== 'object'
+      ) {
+        migrated.selections.foodCart = {};
+      }
+      if (
+        Object.keys(migrated.selections.foodCart).length === 0 &&
+        typeof migrated.selections.food === 'string' &&
+        migrated.selections.food
+      ) {
+        migrated.selections.foodCart = buildLegacyFoodCart(migrated.selections.food);
+      }
+      if ('clothing' in migrated.selections) {
+        delete migrated.selections.clothing;
+      }
+
+      return migrated;
+    } catch {
+      return INITIAL_STATE;
     }
-    return parsed;
   });
 
   // Region-based data

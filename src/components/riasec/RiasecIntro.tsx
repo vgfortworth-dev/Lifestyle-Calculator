@@ -20,6 +20,18 @@ export function RiasecIntro({ onStart }: RiasecIntroProps) {
         </p>
       </div>
 
+      <div className="overflow-hidden rounded-3xl border border-slate-100 bg-slate-900 shadow-lg">
+        <div className="relative pb-[56.25%]">
+          <iframe
+            title="RIASEC quiz introduction video"
+            src="https://www.youtube.com/embed/ACzi_o4b7o8"
+            className="absolute inset-0 h-full w-full"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+          />
+        </div>
+      </div>
+
       <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-5">
         <div className="flex items-start gap-3">
           <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" />
