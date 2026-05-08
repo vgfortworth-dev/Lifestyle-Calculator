@@ -16,6 +16,7 @@ export function buildCloudinaryImageUrl(
 ) {
   if (!publicId) return null;
   if (/^https?:\/\//i.test(publicId)) return publicId;
+  if (publicId.startsWith('/')) return publicId;
 
   const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
   if (!cloudName) {
