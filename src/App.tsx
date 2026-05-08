@@ -4,79 +4,24 @@
  */
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import html2canvas from 'html2canvas';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 import { 
-  MapPin, Home, ShieldCheck, ChevronRight, ChevronLeft, ChevronDown,
-  RotateCcw, Info, CheckCircle2,
-  Save, Loader2, Check, Sparkles,
-  Camera, MessageSquare, X,
+  MapPin, Home, Smartphone, Wifi, Zap, Tv, PlusCircle, 
+  Utensils, Car, Shirt, ShieldCheck, ChevronRight, ChevronLeft, ChevronDown,
+  RotateCcw, DollarSign, Info, CheckCircle2, Calculator,
+  Save, Loader2, Check, Sparkles, GraduationCap, TrendingUp, Briefcase,
+  Camera, MessageSquare, History, X,
   PieChart as PieChartIcon 
 } from 'lucide-react';
-
-import {
-  REGIONS,
-  HOUSING_OPTIONS,
-  PHONE_OPTIONS,
-  PHONE_SUB_OPTIONS,
-  PHONE_PLAN_OPTIONS,
-  INTERNET_OPTIONS,
-  UTILITY_OPTIONS,
-  STREAMING_OPTIONS,
-  SUBSCRIPTION_OPTIONS,
-  TRANSPORT_OPTIONS,
-  INSURANCE_OPTIONS,
-} from './data/texasData';
-import { ALL_FUEL_OPTIONS, EV_FUEL_OPTIONS, GAS_FUEL_OPTIONS } from './data/fuelOptions';
-import { OTHER_OPTIONS } from './data/otherServices';
-import { QuizState, STEPS, Option } from './types';
-import { FuelPlanType } from './types/options';
-import {
-  FUEL_PRICE_ENVIRONMENTS,
-  getFuelMonthlyCost,
-  getFuelPlanType,
-  getFuelPriceEnvironment,
-  getTransportMonthlyCost,
-} from './lib/calculator';
+import { REGIONS, HOUSING_OPTIONS, PHONE_OPTIONS, PHONE_SUB_OPTIONS, PHONE_PLAN_OPTIONS, INTERNET_OPTIONS, UTILITY_OPTIONS, STREAMING_OPTIONS, SUBSCRIPTION_OPTIONS, FOOD_OPTIONS, FOOD_STORE_COMPARISONS, TRANSPORT_OPTIONS, CLOTHING_OPTIONS, INSURANCE_OPTIONS, OTHER_OPTIONS } from './data/texasData';
+import { QuizState, STEPS, Option, FuelPriceEnvironment } from './types';
 import { supabase } from './lib/supabase';
-import { CareerSuggestion } from './services/gemini';
+import { getCareerSuggestions, CareerSuggestion } from './services/gemini';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 import { useCalculatorData } from './hooks/useCalculatorData';
 import AdminPage from './pages/AdminPage';
-import { CLOTHING_GAME_ITEMS } from './data/clothingItems';
-import { GROCERY_GAME_ITEMS, LEGACY_FOOD_PACKAGE_STARTERS } from './data/groceryItems';
 
-import { ClothingGameStep } from './components/ClothingGameStep';
-import { CareerMatchCard } from './components/careers/CareerMatchCard';
-import { CareerDetailModal } from './components/careers/CareerDetailModal';
-import { FuelPlanSelectionStep } from './components/FuelPlanSelectionStep';
-import { GrocerySelectionStep } from './components/GrocerySelectionStep';
-import { InfoButton } from './components/InfoButton';
-import { InsuranceInfoStep } from './components/InsuranceInfoStep';
-import { InsuranceSelectionStep } from './components/InsuranceSelectionStep';
-import { InternetSelectionStep } from './components/InternetSelectionStep';
-import { ModalShell } from './components/ModalShell';
-import { Nav } from './components/Nav';
-import { OtherServicesStep } from './components/OtherServicesStep';
-import { PhonePlanSelectionStep } from './components/PhonePlanSelectionStep';
-import { PhoneSelectionStep } from './components/PhoneSelectionStep';
-import { QuizWrapper } from './components/QuizWrapper';
-import { StreamingSelectionStep } from './components/StreamingSelectionStep';
-import { SubscriptionInfoModal } from './components/SubscriptionInfoModal';
-import { TransportationGridStep, getTransportationOption } from './components/TransportationGridStep';
-import { UtilitiesSelectionStep } from './components/UtilitiesSelectionStep';
-import { getEnhancedInsuranceOptions } from './content/insuranceInfo';
-import { SUBSCRIPTION_OPTION_INFO } from './content/subscriptionInfo';
-import { RiasecQuiz } from './pages/student/RiasecQuiz';
-import { RiasecSetup } from './pages/student/RiasecSetup';
-import { isRiasecSummary, loadRiasecSummary, saveRiasecSummary } from './lib/riasecStorage';
-import { RiasecSummary } from './types/riasec';
-import { rankCareerMatches } from './lib/rankCareerMatches';
-import { getCareerSuggestionKey, getStableCareerSuggestions } from './lib/careerSuggestionCache';
-import { getTotalMonthlyClothingCost, getTotalSelectedItemCount } from './lib/clothingBudget';
-import { getTotalGroceryItemCount, getTotalMonthlyGroceryCost } from './lib/groceryBudget';
-
-// App-owned defaults and display tokens.
 const INITIAL_STATE: QuizState = {
   currentStep: 0,
   regionId: 'tarrant',
@@ -89,13 +34,12 @@ const INITIAL_STATE: QuizState = {
     streaming: [],
     subscriptions: [],
     food: '',
-    foodCart: {},
     transportation: [],
     fuel: '',
     fuelPriceEnvironment: 'average',
-    clothingCloset: {},
+    clothing: '',
     insurance: [],
-    other: {},
+    other: [],
   },
 };
 
@@ -129,84 +73,103 @@ const COLORS = {
   headerBlue: '#3372B2',
   valueTeal: '#2D9B8E',
   selectedGreen: '#10B981',
-  borderSlate: '#E2E8F0',
-  brandOrange: '#F97316',
+  borderSlate: '#E2E8F0'
 };
 
+const TRANSPORT_GRID_DATA = [
+  { id: 'borrow', name: 'Borrow', emoji: '🔑', options: [{ type: 'new', price: 0, label: 'Borrow a family member or friend’s vehicle' }] },
+  { id: 'bike', name: 'Bike', emoji: '🚲', options: [{ type: 'new', price: 386.49 }, { type: 'used', price: 188.0 }] },
+  { id: 'micro', name: 'Micro', emoji: '🛵', options: [{ type: 'new', price: 35978.73 }, { type: 'used', price: 12929.75 }] },
+  { id: 'sedan', name: 'Sedan', emoji: '🚗', options: [{ type: 'new', price: 25679.30 }, { type: 'used', price: 19479.86 }, { type: 'new-ev', price: 65686.43 }, { type: 'used-ev', price: 33998.0 }] },
+  { id: 'luxury-sedan', name: 'Luxury Sedan', emoji: '🚘', options: [{ type: 'new', price: 66229.0 }, { type: 'used', price: 35122.86 }] },
+  { id: 'suv', name: 'SUV', emoji: '🚙', options: [{ type: 'new', price: 37971.48 }, { type: 'used', price: 22761.0 }, { type: 'new-ev', price: 55001.10 }, { type: 'used-ev', price: 38848.0 }] },
+  { id: 'truck', name: 'Truck', emoji: '🛻', options: [{ type: 'new', price: 39491.73 }, { type: 'used', price: 24664.67 }, { type: 'new-ev', price: 64406.0 }, { type: 'used-ev', price: 46284.0 }] },
+  { id: 'luxury-truck', name: 'Luxury Truck', emoji: '🌟', options: [{ type: 'new', price: 63524.58 }, { type: 'used', price: 47414.67 }] },
+] as const;
+
+const INTEREST_RATES = {
+  new: 6.5,
+  used: 11.5,
+  'new-ev': 6.5,
+  'used-ev': 11.5
+} as const;
+
 const USE_SUPABASE = true;
-const APP_LOGO_SRC = '/images/Liestyle calculator logo_Lifestyle Calculator Logo.svg';
-const INTRO_VIDEO_URL = 'https://www.youtube.com/watch?v=YOUR_VIDEO_ID';
-const INTRO_VIDEO_STORAGE_KEY = 'lifestyleCalculatorIntroSeen';
-
-function getIntroVideoEmbedUrl(url: string) {
-  const trimmedUrl = url.trim();
-  if (!trimmedUrl || /YOUR_VIDEO_ID|VIDEO_ID_HERE/i.test(trimmedUrl)) {
-    return null;
-  }
-
-  try {
-    const parsedUrl = new URL(trimmedUrl);
-    const hostname = parsedUrl.hostname.replace(/^www\./, '');
-
-    if (hostname === 'youtu.be') {
-      const videoId = parsedUrl.pathname.replace(/^\/+/, '').split('/')[0];
-      return videoId ? `https://www.youtube.com/embed/${videoId}` : null;
-    }
-
-    if (hostname === 'youtube.com' || hostname === 'm.youtube.com') {
-      if (parsedUrl.pathname === '/watch') {
-        const videoId = parsedUrl.searchParams.get('v');
-        return videoId ? `https://www.youtube.com/embed/${videoId}` : null;
-      }
-
-      if (parsedUrl.pathname.startsWith('/embed/')) {
-        return trimmedUrl;
-      }
-    }
-  } catch {
-    return null;
-  }
-
-  return null;
-}
-
-function LocationIcon({ region }: { region: { name: string; emoji?: string; image?: string } }) {
-  const [iconFailed, setIconFailed] = useState(false);
-
-  if (region.image && !iconFailed) {
-    return (
-      <div className="h-10 w-10 shrink-0 flex items-center justify-center">
-        <img
-          src={region.image}
-          alt={`${region.name} icon`}
-          className="h-10 w-10 object-contain block"
-          onError={() => {
-            console.error('Failed to load location icon:', region.name, region.image);
-            setIconFailed(true);
-          }}
-        />
-      </div>
-    );
-  }
-
-  return (
-    <div className="h-10 w-10 shrink-0 flex items-center justify-center">
-      <span className="text-3xl leading-none">{region.emoji}</span>
-    </div>
-  );
-}
 const REQUIRED_INDEPENDENT_UTILITY_IDS = ['water', 'trash'];
-const RESULTS_GROUPED_CATEGORIES = ['Streaming', 'Subscriptions', 'Utilities', 'Insurance', 'Other'];
 
-function formatWholeDollar(value: number) {
-  return value.toLocaleString(undefined, { maximumFractionDigits: 0 });
-}
+const INTERNET_PLAN_DETAILS: Record<string, { usageLabel: 'Light Use' | 'Moderate Use' | 'Heavy Use'; bestFor: string[] }> = {
+  'att-500': {
+    usageLabel: 'Moderate Use',
+    bestFor: [
+      '1-3 people using Wi-Fi',
+      'Homework and browsing',
+      'Streaming on 1-2 devices',
+      'Video calls (Zoom, FaceTime)',
+      'Light gaming',
+    ],
+  },
+  'att-1gig': {
+    usageLabel: 'Heavy Use',
+    bestFor: [
+      'Families or shared homes',
+      'Streaming on multiple TVs',
+      'Online gaming with low lag',
+      'Uploading videos or content',
+      'Many devices connected at once',
+    ],
+  },
+  'spectrum-1gig': {
+    usageLabel: 'Heavy Use',
+    bestFor: [
+      'Larger households',
+      '4K streaming on multiple TVs',
+      'Gaming and streaming at the same time',
+      'Many devices connected',
+      'All-day high-speed usage',
+    ],
+  },
+  'xfinity-400': {
+    usageLabel: 'Light Use',
+    bestFor: [
+      'Budget-friendly households',
+      'Streaming in HD',
+      'Schoolwork and browsing',
+      '1-2 people using Wi-Fi',
+      'Moderate daily use',
+    ],
+  },
+  'xfinity-800': {
+    usageLabel: 'Moderate Use',
+    bestFor: [
+      'Medium-sized households',
+      'Streaming and gaming',
+      'Multiple users online',
+      'Faster downloads',
+      'Balanced performance and cost',
+    ],
+  },
+  'frontier-500': {
+    usageLabel: 'Light Use',
+    bestFor: [
+      'Budget-conscious users',
+      'Smaller households',
+      'Basic streaming and browsing',
+      'Schoolwork and video calls',
+      'Fewer connected devices',
+    ],
+  },
+  'frontier-1gig': {
+    usageLabel: 'Heavy Use',
+    bestFor: [
+      'Families or shared homes',
+      'Streaming on multiple TVs',
+      'Online gaming with low lag',
+      'Uploading videos or content',
+      'Many devices connected at once',
+    ],
+  },
+};
 
-function formatMonthlyCurrency(value: number) {
-  return value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
-
-// Shared badge styling still used by App-owned generic option rendering.
 const USAGE_BADGE_STYLES: Record<string, string> = {
   'Light Use': 'bg-emerald-50 text-emerald-700 border-emerald-200',
   'Moderate Use': 'bg-amber-50 text-amber-700 border-amber-200',
@@ -225,194 +188,509 @@ const USAGE_BADGE_ICONS: Record<string, string> = {
   'Heavy Driving': '🔴',
 };
 
-const EXTRA_CLOUD_STORAGE_OPTIONS = SUBSCRIPTION_OPTIONS.filter(option =>
-  ['onedrive-100gb', 'googleone-2tb', 'box-personal-pro'].includes(option.id)
-);
+const GAS_FUEL_OPTIONS: Option[] = [
+  {
+    id: 'gas-local',
+    name: 'Local Driver',
+    description: 'Short trips around town.',
+    monthlyCost: 80,
+    emoji: '⛽',
+    category: 'Light Driving',
+    items: ['Driving close to home', 'School, work, or errands nearby', 'A few trips each week', 'Lower monthly gas use'],
+  },
+  {
+    id: 'gas-mid',
+    name: 'Mid-Range Driver',
+    description: 'Regular driving most weeks.',
+    monthlyCost: 150,
+    emoji: '🚗',
+    category: 'Moderate Driving',
+    items: ['Daily commuting', 'Weekend trips around the area', 'More errands and activities', 'Moderate monthly gas use'],
+  },
+  {
+    id: 'gas-far',
+    name: 'Far-Range Driver',
+    description: 'Longer trips and frequent driving.',
+    monthlyCost: 250,
+    emoji: '🛣️',
+    category: 'Heavy Driving',
+    items: ['Longer commutes', 'Frequent highway driving', 'Lots of activities or travel', 'Higher monthly gas use'],
+  },
+];
 
-// Small data adapters that still bridge App-owned option sources.
-function getEnhancedSubscriptionOptions(options: any[]) {
-  const existingIds = new Set(options.map((option) => option.id));
-  return [
-    ...options,
-    ...EXTRA_CLOUD_STORAGE_OPTIONS.filter(option => !existingIds.has(option.id)),
-  ];
+const EV_FUEL_OPTIONS: Option[] = [
+  {
+    id: 'ev-local',
+    name: 'Local EV',
+    description: 'Light charging for local trips.',
+    monthlyCost: 30,
+    emoji: '🔌',
+    category: 'Light Driving',
+    items: ['Driving close to home', 'Charging mostly at home', 'A few trips each week', 'Lower monthly electricity use'],
+  },
+  {
+    id: 'ev-mid',
+    name: 'Mid-Range EV',
+    description: 'Regular charging for weekly driving.',
+    monthlyCost: 60,
+    emoji: '⚡',
+    category: 'Moderate Driving',
+    items: ['Daily commuting', 'Regular errands and activities', 'Some longer trips', 'Moderate monthly charging costs'],
+  },
+  {
+    id: 'ev-far',
+    name: 'Far-Range EV',
+    description: 'More charging for frequent driving.',
+    monthlyCost: 100,
+    emoji: '🔋',
+    category: 'Heavy Driving',
+    items: ['Longer commutes', 'Frequent driving', 'More public charging', 'Higher monthly charging costs'],
+  },
+];
+
+const ALL_FUEL_OPTIONS = [...GAS_FUEL_OPTIONS, ...EV_FUEL_OPTIONS];
+const FUEL_PRICE_ENVIRONMENTS: { id: FuelPriceEnvironment; label: string; multiplier: number; note?: string }[] = [
+  { id: 'lower', label: 'Lower Prices', multiplier: 0.85, note: 'Fuel prices are lower right now, so driving costs less.' },
+  { id: 'average', label: 'Average Prices', multiplier: 1 },
+  { id: 'higher', label: 'Higher Prices', multiplier: 1.45, note: 'Fuel prices are higher right now, so driving costs more.' },
+];
+
+const INSURANCE_PLAN_OPTIONS: Option[] = [
+  {
+    id: 'health-basic',
+    name: 'Basic Health Plan',
+    description: 'Lower monthly cost with basic doctor visit support.',
+    monthlyCost: 300,
+    category: 'Health',
+    emoji: '🏥',
+    items: ['Saving money each month', 'Healthy people with fewer appointments', 'Basic checkups and urgent needs', 'Lower monthly premium'],
+  },
+  {
+    id: 'health-standard',
+    name: 'Standard Health Plan',
+    description: 'Balanced coverage for regular care.',
+    monthlyCost: 460,
+    category: 'Health',
+    emoji: '🩺',
+    items: ['Regular doctor visits', 'Prescriptions or routine care', 'Balanced cost and protection', 'People who want a middle option'],
+  },
+  {
+    id: 'health-premium',
+    name: 'Premium Health Plan',
+    description: 'Higher monthly cost for stronger protection.',
+    monthlyCost: 600,
+    category: 'Health',
+    emoji: '🛡️',
+    items: ['More frequent care', 'Specialists or ongoing health needs', 'More protection from big bills', 'People who want extra peace of mind'],
+  },
+  {
+    id: 'dental-low',
+    name: 'Dental Low Plan',
+    description: 'Basic cleanings and checkups.',
+    monthlyCost: 20,
+    category: 'Dental',
+    emoji: '🦷',
+    items: ['Cleanings and checkups', 'Preventive dental visits', 'Lower monthly dental cost', 'Basic smile care'],
+  },
+  {
+    id: 'dental-high',
+    name: 'Dental High Plan',
+    description: 'More coverage for procedures and dental care.',
+    monthlyCost: 40,
+    category: 'Dental',
+    emoji: '🦷',
+    items: ['Checkups and cleanings', 'More dental treatment support', 'People with more dental needs', 'Stronger dental protection'],
+  },
+  {
+    id: 'vision-low',
+    name: 'Vision Low Plan',
+    description: 'Basic eye exam support.',
+    monthlyCost: 10,
+    category: 'Vision',
+    emoji: '👓',
+    items: ['Routine eye exams', 'Lower monthly vision cost', 'Basic vision support', 'People who mostly need checkups'],
+  },
+  {
+    id: 'vision-high',
+    name: 'Vision High Plan',
+    description: 'Exams, glasses, and contacts support.',
+    monthlyCost: 20,
+    category: 'Vision',
+    emoji: '👓',
+    items: ['Eye exams', 'Glasses or contacts', 'More yearly vision needs', 'Stronger vision support'],
+  },
+  {
+    id: 'life-basic',
+    name: 'Basic Life',
+    description: 'A small safety net for loved ones.',
+    monthlyCost: 20,
+    category: 'Life',
+    emoji: '🤝',
+    items: ['Lower monthly cost', 'Simple protection', 'People starting their first budget', 'Basic support for family'],
+  },
+  {
+    id: 'life-standard',
+    name: 'Standard Life',
+    description: 'More protection for people who depend on you.',
+    monthlyCost: 60,
+    category: 'Life',
+    emoji: '👨‍👩‍👧‍👦',
+    items: ['More family protection', 'People with dependents', 'Larger safety net', 'Long-term peace of mind'],
+  },
+];
+
+function getEnhancedInsuranceOptions(options: any[]) {
+  const supplementalCategories = ['Health', 'Dental', 'Vision', 'Life'];
+  const baseOptions = options.filter((option) => !supplementalCategories.includes(option.category));
+  return [...baseOptions, ...INSURANCE_PLAN_OPTIONS];
 }
 
-function getFuelOptionsForType(type: FuelPlanType): Option[] {
+type InsurancePriority = 'Saving money' | 'Being protected' | 'Regular care';
+
+const INSURANCE_PRIORITY_BY_ID: Record<string, InsurancePriority[]> = {
+  'health-basic': ['Saving money'],
+  'health-standard': ['Regular care', 'Being protected'],
+  'health-premium': ['Being protected', 'Regular care'],
+  'vision-low': ['Saving money', 'Regular care'],
+  'vision-high': ['Regular care', 'Being protected'],
+  'dental-low': ['Saving money', 'Regular care'],
+  'dental-high': ['Regular care', 'Being protected'],
+  'life-basic': ['Saving money'],
+  'life-standard': ['Being protected'],
+  'auto-geico': ['Saving money'],
+  'auto-farmbureau': ['Saving money'],
+  'auto-usaa': ['Saving money'],
+  'auto-statefarm': ['Being protected'],
+  'auto-progressive': ['Being protected'],
+  'auto-allstate': ['Being protected'],
+  'home-lemonade': ['Saving money'],
+  'home-progressive': ['Saving money'],
+  'home-usaa': ['Saving money'],
+  'home-statefarm': ['Being protected'],
+  'home-allstate': ['Being protected'],
+  'home-farmbureau': ['Being protected'],
+};
+
+const addRegularCarePriority = (priorities: InsurancePriority[], category?: string) => {
+  if (category === 'Auto' || category === 'Home') {
+    return Array.from(new Set([...priorities, 'Regular care' as InsurancePriority]));
+  }
+  return priorities;
+};
+
+const INSURANCE_WHY_BY_ID: Record<string, string> = {
+  'health-basic': 'Good for saving money because the monthly cost is lower.',
+  'health-standard': 'Good for regular care because it balances checkups, prescriptions, and protection.',
+  'health-premium': 'Good for being protected because it covers more care.',
+  'vision-low': 'Good for saving money and regular care because it helps with routine eye checkups at a low monthly cost.',
+  'vision-high': 'Good for regular care and being protected because it helps with more vision needs during the year.',
+  'dental-low': 'Good for saving money and regular care because it helps cover preventive dental visits.',
+  'dental-high': 'Good for being protected and regular care because it helps with checkups and more dental treatment.',
+  'life-basic': 'Good for saving money because it gives a simple safety net at a lower monthly cost.',
+  'life-standard': 'Good for being protected because it gives a larger safety net for people who depend on you.',
+  'auto-geico': 'Good for saving money because it is one of the lower-cost auto options.',
+  'auto-farmbureau': 'Good for saving money because it keeps the monthly auto cost lower.',
+  'auto-usaa': 'Good for saving money because it offers a lower monthly auto estimate.',
+  'auto-statefarm': 'Good for being protected because it focuses on local agent support.',
+  'auto-progressive': 'Good for being protected because it includes stronger auto coverage tools.',
+  'auto-allstate': 'Good for being protected because it focuses on accident support.',
+  'home-lemonade': 'Good for saving money because it is a lower-cost renters option.',
+  'home-progressive': 'Good for saving money because it keeps the renters cost lower.',
+  'home-usaa': 'Good for saving money because it is one of the lowest renters estimates.',
+  'home-statefarm': 'Good for being protected because it can support bundled renters coverage.',
+  'home-allstate': 'Good for being protected because it focuses on renters security support.',
+  'home-farmbureau': 'Good for being protected because it offers local Texas renters support.',
+};
+
+function getInsurancePriorities(option: Option): InsurancePriority[] {
+  const id = option.id.toLowerCase();
+  const category = option.category || '';
+
+  if (INSURANCE_PRIORITY_BY_ID[id]) return addRegularCarePriority(INSURANCE_PRIORITY_BY_ID[id], category);
+  if (category === 'Auto') return addRegularCarePriority(option.monthlyCost <= 160 ? ['Saving money'] : ['Being protected'], category);
+  if (category === 'Home') return addRegularCarePriority(option.monthlyCost <= 16 ? ['Saving money'] : ['Being protected'], category);
+  if (category === 'Health' && id.includes('basic')) return ['Saving money'];
+  if (category === 'Health' && (id.includes('standard') || id.includes('premium'))) return ['Regular care', 'Being protected'];
+  if (category === 'Dental' || category === 'Vision') return ['Regular care'];
+  if (category === 'Life' && id.includes('basic')) return ['Saving money'];
+  if (category === 'Life') return ['Being protected'];
+  return [];
+}
+
+const INSURANCE_PRIORITY_BADGES: Record<InsurancePriority, string> = {
+  'Saving money': 'Best for Saving Money',
+  'Being protected': 'Best for Protection',
+  'Regular care': 'Best for Regular Care',
+};
+
+const ELECTRICITY_PLAN_INFO: Record<string, { tag: string; what: string; why: string; different: string[]; takeaway: string }> = {
+  gexa: {
+    tag: 'Predictable',
+    what: 'This is a fixed-rate electricity plan for 12 months.',
+    why: 'A person might choose this plan if they want a simpler monthly rate and do not want their electricity price changing often.',
+    different: [
+      'Fixed rate means the price per unit of electricity stays steady during the plan term.',
+      'It is a straightforward option for students learning how monthly bills work.',
+    ],
+    takeaway: 'Good for someone who wants a more predictable bill.',
+  },
+  reliant: {
+    tag: 'Balanced',
+    what: 'This is a 12-month electricity plan from Reliant that is designed to help households manage regular electricity use.',
+    why: 'A person might choose this plan if they want a well-known provider and a plan that feels balanced for everyday home use.',
+    different: [
+      'It is positioned as a reliable everyday plan.',
+      'It may feel like a good middle-ground option for students comparing cost and stability.',
+    ],
+    takeaway: 'Good for someone who wants a dependable everyday electricity plan.',
+  },
+  direct: {
+    tag: 'Convenient',
+    what: 'This is a 12-month electricity plan that includes an auto pay feature.',
+    why: 'A person might choose this plan if they like the idea of bills being paid automatically each month and want to stay organized.',
+    different: [
+      'Auto pay can make paying bills easier.',
+      'This can be helpful for people who want convenience and fewer missed payments.',
+    ],
+    takeaway: 'Good for someone who likes convenience and automatic payments.',
+  },
+  '4change': {
+    tag: 'Savings-Focused',
+    what: 'This is a 12-month fixed electricity plan that includes a bill credit feature.',
+    why: 'A person might choose this plan if they want a lower estimated monthly cost and like the idea of extra savings built into the plan.',
+    different: [
+      'Includes a bill credit feature.',
+      'Can be a good option for someone focused on monthly savings.',
+    ],
+    takeaway: 'Good for someone who wants to save money when possible.',
+  },
+};
+
+function getInsuranceWhy(option: Option) {
+  const id = option.id.toLowerCase();
+  const category = option.category || '';
+
+  if (INSURANCE_WHY_BY_ID[id]) return INSURANCE_WHY_BY_ID[id];
+  if (category === 'Auto') {
+    return option.monthlyCost <= 160
+      ? 'Good for saving money because the monthly auto cost is lower.'
+      : 'Good for being protected because it offers stronger auto coverage support.';
+  }
+  if (category === 'Home') {
+    return option.monthlyCost <= 16
+      ? 'Good for saving money because the monthly renters cost is lower.'
+      : 'Good for being protected because it offers stronger renters coverage support.';
+  }
+  if (category === 'Health' || category === 'Dental' || category === 'Vision') {
+    return 'Good for regular care because it helps with routine checkups.';
+  }
+  if (category === 'Life') {
+    return 'Good for being protected because it creates a safety net for loved ones.';
+  }
+  return 'Good to compare because it changes your monthly protection and cost.';
+}
+
+function getInsuranceInfo(option: Option) {
+  const id = option.id.toLowerCase();
+  const category = option.category || '';
+
+  if (category === 'Auto') {
+    return {
+      what: 'Auto insurance helps cover damage, accidents, and other car-related costs.',
+      why: 'If you drive, auto insurance is usually required by law. It can help protect you from paying a lot of money after an accident.',
+    };
+  }
+  if (category === 'Home') {
+    return {
+      what: 'Home or renters insurance helps protect your things, like clothes, furniture, or electronics, if they are stolen or damaged.',
+      why: 'If you rent or own a place, this insurance can help replace your belongings after problems like fire, storms, or theft.',
+    };
+  }
+  if (category === 'Health') {
+    return {
+      what: 'Health insurance helps pay for doctor visits, medicine, and hospital care.',
+      why: 'It can help make medical care more affordable and protect you from very large health bills.',
+    };
+  }
+  if (id === 'dental-low') {
+    return {
+      what: 'This plan helps pay for basic dental care like cleanings and checkups.',
+      why: 'It is helpful if you want lower-cost support for routine dentist visits.',
+    };
+  }
+  if (id === 'dental-high') {
+    return {
+      what: 'This plan helps pay for basic dental care and more dental treatment.',
+      why: 'It can help if you want more protection in case you need fillings, procedures, or more dental work.',
+    };
+  }
+  if (id === 'vision-low') {
+    return {
+      what: 'This plan helps pay for basic eye exams.',
+      why: 'It is helpful if you want support for regular eye checkups at a lower monthly cost.',
+    };
+  }
+  if (id === 'vision-high') {
+    return {
+      what: 'This plan helps pay for eye exams and may help with glasses or contacts.',
+      why: 'It can be useful if you need vision care more often or wear glasses or contacts.',
+    };
+  }
+  if (id === 'life-basic') {
+    return {
+      what: 'Life insurance gives money to your family or chosen person if you die.',
+      why: 'Some people get life insurance to help protect loved ones from financial stress.',
+    };
+  }
+  if (id === 'life-standard') {
+    return {
+      what: 'This is a larger life insurance plan with more financial protection.',
+      why: 'People may choose it if others depend on them financially and they want stronger protection.',
+    };
+  }
+
+  return {
+    what: 'This insurance option helps protect you from certain expensive problems.',
+    why: 'Someone might choose it to lower financial risk and feel more prepared.',
+  };
+}
+
+function calculateTransportMonthly(price: number, annualRate: number) {
+  if (price === 0) return 0;
+  const r = annualRate / 100 / 12;
+  const n = 60;
+  return (price * r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1);
+}
+
+function getTransportRateKey(category?: string) {
+  if (category === 'new' || category === 'used') return category;
+  if (category === 'new_ev') return 'new-ev';
+  if (category === 'used_ev') return 'used-ev';
+  return null;
+}
+
+function getTransportMonthlyCost(opt: any) {
+  if (!opt) return 0;
+  if (typeof opt.monthlyCost === 'number') return opt.monthlyCost;
+
+  const rateKey = getTransportRateKey(opt.category);
+  if (!rateKey || typeof opt.price !== 'number') return 0;
+
+  return calculateTransportMonthly(opt.price, INTEREST_RATES[rateKey]);
+}
+
+function getTransportationOption(id: string): Option | undefined {
+  const [rowId, type] = id.split(/-(?=new|used)/);
+  const row = TRANSPORT_GRID_DATA.find(item => item.id === rowId);
+  const match = row?.options.find(opt => opt.type === type);
+  if (!row || !match) return undefined;
+
+  const rate = INTEREST_RATES[match.type as keyof typeof INTEREST_RATES] || 0;
+  const monthly = calculateTransportMonthly(match.price, rate);
+  const suffix =
+    match.type === 'new' ? 'New' :
+    match.type === 'used' ? 'Used' :
+    match.type === 'new-ev' ? 'New EV' :
+    'Used EV';
+  const label = 'label' in match ? match.label : undefined;
+
+  return {
+    id,
+    name: `${row.name} (${suffix})`,
+    description: label || `${suffix} ${row.name}`,
+    monthlyCost: monthly,
+    emoji: row.emoji
+  };
+}
+
+function getFuelPlanType(transportationIds: string[]): 'gas' | 'ev' | 'none' {
+  const selectedId = transportationIds[0];
+  if (!selectedId || selectedId.startsWith('bike')) return 'none';
+  if (selectedId.includes('-ev') || selectedId.includes('_ev') || selectedId.includes('ev-')) return 'ev';
+  return 'gas';
+}
+
+function getFuelOptionsForType(type: 'gas' | 'ev' | 'none') {
   if (type === 'ev') return EV_FUEL_OPTIONS;
   if (type === 'gas') return GAS_FUEL_OPTIONS;
   return [];
 }
 
-function buildLegacyFoodCart(legacyFoodId: string) {
-  const starterItems = LEGACY_FOOD_PACKAGE_STARTERS[legacyFoodId];
-  if (!starterItems) return {};
-
-  return starterItems.reduce<QuizState['selections']['foodCart']>((cart, starter) => {
-    const item = GROCERY_GAME_ITEMS.find((candidate) => candidate.id === starter.id);
-    if (!item) return cart;
-
-    cart[item.id] = {
-      id: item.id,
-      name: item.name,
-      category: item.category,
-      price: item.itemPrice,
-      quantity: starter.quantity,
-      description: item.description,
-      image: item.imageUrl,
-      productType: item.productType,
-      quality: item.quality,
-      quantityLabel: item.quantity,
-      shopperTags: item.shopperTags,
-      isBudget: item.isBudget,
-      isPremium: item.isPremium,
-      isAllergyFriendly: item.isAllergyFriendly,
-    };
-    return cart;
-  }, {});
+function getFuelPriceEnvironment(environment: string): FuelPriceEnvironment {
+  return FUEL_PRICE_ENVIRONMENTS.some(option => option.id === environment)
+    ? environment as FuelPriceEnvironment
+    : 'average';
 }
 
-function getHistoryRiasecSummary(): RiasecSummary | null {
-  const historyState = window.history.state as { riasecResult?: unknown } | null;
-  return isRiasecSummary(historyState?.riasecResult) ? historyState.riasecResult : null;
+function getFuelPriceMultiplier(environment: FuelPriceEnvironment) {
+  return FUEL_PRICE_ENVIRONMENTS.find(option => option.id === environment)?.multiplier || 1;
+}
+
+function getFuelMonthlyCost(opt: Option | undefined, environment: FuelPriceEnvironment) {
+  if (!opt) return 0;
+  if (opt.id.startsWith('gas-')) {
+    return Math.round(opt.monthlyCost * getFuelPriceMultiplier(environment));
+  }
+  return opt.monthlyCost;
 }
 
 export default function App() {
-  // State
   const [session, setSession] = useState<any>(null);
   const [showHistory, setShowHistory] = useState(false);
-  const [routePath, setRoutePath] = useState(() => window.location.pathname);
-  const [isIntroVideoOpen, setIsIntroVideoOpen] = useState(false);
-  const [hasCheckedIntroVideo, setHasCheckedIntroVideo] = useState(false);
-  const [riasecSummary, setRiasecSummary] = useState<RiasecSummary | null>(() =>
-    getHistoryRiasecSummary() || loadRiasecSummary()
-  );
-  const [hasCompletedRiasecSetup, setHasCompletedRiasecSetup] = useState(() =>
-    !!getHistoryRiasecSummary() || !!loadRiasecSummary()
-  );
   const {
     regions,
     internetOptions,
     utilityOptions,
     streamingOptions,
     subscriptionOptions,
-    clothingItems,
+    clothingOptions,
     insuranceOptions,
     phonePlanOptions,
     phoneDeviceOptions,
     transportOptions,
-    loading: calculatorDataLoading
+    loading: calculatorDataLoading,
+    error: calculatorDataError
   } = useCalculatorData();
   const [state, setState] = useState<QuizState>(() => {
     const saved = localStorage.getItem('lifestyle_calculator_state');
     if (!saved) return INITIAL_STATE;
-
-    try {
-      const parsed = JSON.parse(saved);
-      const migrated = {
-        ...INITIAL_STATE,
-        ...parsed,
-        selections: {
-          ...INITIAL_STATE.selections,
-          ...(parsed.selections || {}),
-        },
-      };
-
-      // Migration: ensure transportation is an array
-      if (typeof migrated.selections.transportation === 'string') {
-        migrated.selections.transportation = migrated.selections.transportation
-          ? [migrated.selections.transportation]
-          : [];
-      }
-      if (migrated.selections.phone === 'keep-current') {
-        migrated.selections.phone = 'keep-phone';
-      }
-      if (migrated.selections.phone === 'new-21') {
-        migrated.selections.phone = 'new-21-256';
-      }
-      if (typeof migrated.selections.fuel !== 'string') {
-        migrated.selections.fuel = '';
-      }
-      migrated.selections.fuelPriceEnvironment = getFuelPriceEnvironment(migrated.selections.fuelPriceEnvironment);
-      if (Array.isArray(migrated.selections.insurance)) {
-        migrated.selections.insurance = migrated.selections.insurance.map((id: string) => {
-          if (id === 'dental-standard') return 'dental-low';
-          if (id === 'vision-standard') return 'vision-low';
-          return id;
-        });
-      }
-      if (
-        !migrated.selections.clothingCloset ||
-        Array.isArray(migrated.selections.clothingCloset) ||
-        typeof migrated.selections.clothingCloset !== 'object'
-      ) {
-        migrated.selections.clothingCloset = {};
-      }
-      if (
-        !migrated.selections.foodCart ||
-        Array.isArray(migrated.selections.foodCart) ||
-        typeof migrated.selections.foodCart !== 'object'
-      ) {
-        migrated.selections.foodCart = {};
-      }
-      if (
-        Object.keys(migrated.selections.foodCart).length === 0 &&
-        typeof migrated.selections.food === 'string' &&
-        migrated.selections.food
-      ) {
-        migrated.selections.foodCart = buildLegacyFoodCart(migrated.selections.food);
-      }
-      if ('clothing' in migrated.selections) {
-        delete migrated.selections.clothing;
-      }
-      if (Array.isArray(migrated.selections.other)) {
-        migrated.selections.other = migrated.selections.other.reduce((acc: Record<string, any>, id: string) => {
-          const option = OTHER_OPTIONS.find((candidate) => candidate.id === id);
-          if (!option) return acc;
-          acc[id] = {
-            id: option.id,
-            name: option.name,
-            price: option.monthlyCost,
-            quantity: 1,
-            description: option.description,
-            emoji: option.emoji,
-            category: option.category,
-            type: option.type,
-          };
-          return acc;
-        }, {});
-      } else if (
-        !migrated.selections.other ||
-        typeof migrated.selections.other !== 'object'
-      ) {
-        migrated.selections.other = {};
-      }
-
-      return migrated;
-    } catch {
-      return INITIAL_STATE;
+    
+    const parsed = JSON.parse(saved);
+    // Migration: ensure transportation is an array
+    if (typeof parsed.selections.transportation === 'string') {
+      parsed.selections.transportation = parsed.selections.transportation 
+        ? [parsed.selections.transportation] 
+        : [];
     }
+    if (parsed.selections.phone === 'keep-current') {
+      parsed.selections.phone = 'keep-phone';
+    }
+    if (parsed.selections.phone === 'new-21') {
+      parsed.selections.phone = 'new-21-256';
+    }
+    if (typeof parsed.selections.fuel !== 'string') {
+      parsed.selections.fuel = '';
+    }
+    parsed.selections.fuelPriceEnvironment = getFuelPriceEnvironment(parsed.selections.fuelPriceEnvironment);
+    if (Array.isArray(parsed.selections.insurance)) {
+      parsed.selections.insurance = parsed.selections.insurance.map((id: string) => {
+        if (id === 'dental-standard') return 'dental-low';
+        if (id === 'vision-standard') return 'vision-low';
+        return id;
+      });
+    }
+    return parsed;
   });
 
-  // Derived option data
-  const activeRegions = useMemo(() => {
-    const regionSource = USE_SUPABASE && regions.length ? regions : REGIONS;
-
-    return regionSource.map((region: any) => {
-      const fallbackRegion = REGIONS.find((entry) => entry.id === region.id);
-
-      return {
-        ...region,
-        emoji: region.emoji ?? fallbackRegion?.emoji,
-        image: region.image ?? fallbackRegion?.image,
-      };
-    });
-  }, [regions]);
+  // Region-based data
+  const activeRegions = USE_SUPABASE && regions.length ? regions : REGIONS;
   const activeInternetOptions = USE_SUPABASE && internetOptions.length ? internetOptions : INTERNET_OPTIONS;
   const activeUtilityOptions = USE_SUPABASE && utilityOptions.length ? utilityOptions : UTILITY_OPTIONS;
+
+  // Global data
   const activeStreamingOptions = USE_SUPABASE && streamingOptions.length ? streamingOptions : STREAMING_OPTIONS;
-  const activeSubscriptionOptions = getEnhancedSubscriptionOptions(USE_SUPABASE && subscriptionOptions.length ? subscriptionOptions : SUBSCRIPTION_OPTIONS);
-  const activeClothingGameItems = USE_SUPABASE && clothingItems.length ? clothingItems : CLOTHING_GAME_ITEMS;
+  const activeSubscriptionOptions = USE_SUPABASE && subscriptionOptions.length ? subscriptionOptions : SUBSCRIPTION_OPTIONS;
+  const activeClothingOptions = USE_SUPABASE && clothingOptions.length ? clothingOptions : CLOTHING_OPTIONS;
   const activeInsuranceOptions = getEnhancedInsuranceOptions(USE_SUPABASE && insuranceOptions.length ? insuranceOptions : INSURANCE_OPTIONS);
   const activePhonePlanOptions = USE_SUPABASE && phonePlanOptions.length ? phonePlanOptions : PHONE_PLAN_OPTIONS;
   const activeTransportOptions = transportOptions.length ? transportOptions : TRANSPORT_OPTIONS;
@@ -431,46 +709,10 @@ export default function App() {
         }))
       ]
     : PHONE_OPTIONS;
-  const introVideoEmbedUrl = useMemo(() => getIntroVideoEmbedUrl(INTRO_VIDEO_URL), []);
-  const isWelcomeScreen = routePath === '/' && STEPS[state.currentStep] === 'Welcome';
 
-  // Persistence and session effects
   useEffect(() => {
     localStorage.setItem('lifestyle_calculator_state', JSON.stringify(state));
   }, [state]);
-
-  useEffect(() => {
-    if (!isWelcomeScreen || hasCheckedIntroVideo) return;
-
-    const hasSeenIntro = localStorage.getItem(INTRO_VIDEO_STORAGE_KEY) === 'true';
-    if (!hasSeenIntro) {
-      setIsIntroVideoOpen(true);
-    }
-    setHasCheckedIntroVideo(true);
-  }, [hasCheckedIntroVideo, isWelcomeScreen]);
-
-  useEffect(() => {
-    if (isWelcomeScreen) return;
-    setIsIntroVideoOpen(false);
-  }, [isWelcomeScreen]);
-
-  useEffect(() => {
-    const handleRouteChange = () => {
-      setRoutePath(window.location.pathname);
-      const routeSummary = getHistoryRiasecSummary();
-      if (routeSummary) {
-        setRiasecSummary(routeSummary);
-        setHasCompletedRiasecSetup(true);
-      } else {
-        const storedSummary = loadRiasecSummary();
-        setRiasecSummary(storedSummary);
-        if (storedSummary) setHasCompletedRiasecSetup(true);
-      }
-    };
-
-    window.addEventListener('popstate', handleRouteChange);
-    return () => window.removeEventListener('popstate', handleRouteChange);
-  }, []);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => setSession(session));
@@ -493,7 +735,6 @@ export default function App() {
     activeRegions.find((r: any) => r.id === state.regionId) || activeRegions[0],
   [state.regionId, activeRegions]);
 
-  // Selection normalization effects
   useEffect(() => {
     const shouldRequireBaseUtilities = !!state.selections.housing && state.selections.housing !== 'family';
     const availableRequiredUtilityIds = REQUIRED_INDEPENDENT_UTILITY_IDS.filter(id =>
@@ -543,7 +784,6 @@ export default function App() {
     });
   }, [state.selections.transportation]);
 
-  // Totals and step-derived state
   const calculateMonthlyTotal = () => {
     let total = 0;
     const multiplier = currentRegion.costMultiplier;
@@ -583,7 +823,8 @@ export default function App() {
     });
 
     // Food
-    total += getTotalMonthlyGroceryCost(state.selections.foodCart) * multiplier;
+    const food = FOOD_OPTIONS.find(o => o.id === state.selections.food);
+    if (food) total += food.monthlyCost * multiplier;
 
     // Transportation
     state.selections.transportation.forEach(id => {
@@ -596,7 +837,8 @@ export default function App() {
     total += getFuelMonthlyCost(fuel, state.selections.fuelPriceEnvironment);
 
     // Clothing
-    total += getTotalMonthlyClothingCost(state.selections.clothingCloset);
+    const clothing = activeClothingOptions.find((o: any) => o.id === state.selections.clothing);
+    if (clothing) total += clothing.monthlyCost;
 
     // Insurance
     state.selections.insurance.forEach(id => {
@@ -605,8 +847,9 @@ export default function App() {
     });
 
     // Other
-    Object.values(state.selections.other).forEach((entry: any) => {
-      total += entry.price * entry.quantity;
+    state.selections.other.forEach(id => {
+      const opt = OTHER_OPTIONS.find(o => o.id === id);
+      if (opt) total += opt.monthlyCost;
     });
 
     return total;
@@ -625,7 +868,6 @@ export default function App() {
   const currentQuestionStep = Math.max(0, Math.min(state.currentStep - firstQuestionStep + 1, totalQuestionSteps));
   const progressPercent = totalQuestionSteps > 0 ? (currentQuestionStep / totalQuestionSteps) * 100 : 0;
 
-  // Navigation and selection handlers
   const nextStep = () => {
     if (!canAdvanceCurrentStep) return;
 
@@ -669,69 +911,6 @@ export default function App() {
     handleSelection(category, updated);
   };
 
-  const handleClothingClosetChange = (clothingCloset: QuizState['selections']['clothingCloset']) => {
-    setState(prev => ({
-      ...prev,
-      selections: {
-        ...prev.selections,
-        clothingCloset,
-      },
-    }));
-  };
-
-  const handleFoodCartChange = (foodCart: QuizState['selections']['foodCart']) => {
-    setState(prev => ({
-      ...prev,
-      selections: {
-        ...prev.selections,
-        foodCart,
-        food: '',
-      },
-    }));
-  };
-
-  const handleOtherServicesChange = (other: QuizState['selections']['other']) => {
-    setState(prev => ({
-      ...prev,
-      selections: {
-        ...prev.selections,
-        other,
-      },
-    }));
-  };
-
-  const openRiasecQuiz = () => {
-    window.history.pushState({}, '', '/riasec');
-    setRoutePath('/riasec');
-    window.scrollTo(0, 0);
-  };
-
-  const handleRiasecHandoff = (summary: RiasecSummary) => {
-    saveRiasecSummary(summary);
-    setRiasecSummary(summary);
-    setHasCompletedRiasecSetup(true);
-    window.history.pushState({ riasecResult: summary }, '', '/');
-    setRoutePath('/');
-    window.scrollTo(0, 0);
-  };
-
-  const handleRiasecSkip = () => {
-    setHasCompletedRiasecSetup(true);
-    window.history.replaceState(window.history.state || {}, '', '/');
-    setRoutePath('/');
-    window.scrollTo(0, 0);
-  };
-
-  const openIntroVideo = () => {
-    setIsIntroVideoOpen(true);
-  };
-
-  const closeIntroVideo = () => {
-    setIsIntroVideoOpen(false);
-    localStorage.setItem(INTRO_VIDEO_STORAGE_KEY, 'true');
-  };
-
-  // Step rendering
   const renderStep = () => {
     const stepName = STEPS[state.currentStep];
 
@@ -742,48 +921,25 @@ export default function App() {
             <motion.div 
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              className="mb-6 flex items-center justify-center md:mb-10"
+              className="w-32 h-32 bg-orange-500 rounded-full flex items-center justify-center shadow-xl shadow-orange-200"
             >
-              <img
-                src={APP_LOGO_SRC}
-                alt="Lifestyle Calculator logo"
-                className="h-24 w-auto object-contain sm:h-28"
-              />
+              <Calculator className="w-16 h-16 text-white" />
             </motion.div>
             <div className="space-y-4 max-w-2xl">
+              <h1 className="text-5xl font-black text-slate-900 tracking-tight">
+                The Lifestyle <span className="text-orange-500">Calculator</span>
+              </h1>
               <p className="text-xl text-slate-600 font-medium leading-relaxed">
                 Ever wondered what it actually costs to live the life you want in Texas? 
                 Let's build your future budget together.
               </p>
             </div>
-            <div className="flex w-full max-w-md flex-col gap-4">
-              <button 
-                onClick={nextStep}
-                className="flex items-center justify-center gap-3 rounded-2xl bg-slate-900 px-10 py-5 text-xl font-bold text-white shadow-lg transition-all hover:bg-slate-800 hover:shadow-xl active:scale-95"
-              >
-                Start My Journey <ChevronRight className="w-6 h-6" />
-              </button>
-              <button
-                onClick={openIntroVideo}
-                className="rounded-2xl border border-blue-100 bg-blue-50/70 px-8 py-4 text-base font-black text-[#3372B2] shadow-sm transition-all hover:border-blue-200 hover:bg-blue-50 active:scale-95"
-              >
-                Watch Introduction Video
-              </button>
-              <button
-                onClick={openRiasecQuiz}
-                className="rounded-2xl border border-slate-100 bg-white px-8 py-4 text-base font-black text-slate-700 shadow-sm transition-all hover:bg-slate-100 active:scale-95"
-              >
-                Take the RIASEC Career Quiz
-              </button>
-            </div>
-            {riasecSummary && (
-              <div className="max-w-2xl rounded-3xl border border-blue-100 bg-blue-50/80 p-5 text-left shadow-sm">
-                <p className="text-xs font-black uppercase tracking-widest text-[#3372B2]">Career interest summary loaded</p>
-                <p className="mt-2 text-sm font-medium leading-relaxed text-slate-600">
-                  Your current RIASEC match is <span className="font-black text-slate-900">{riasecSummary.topThree}</span>. Only this short same-session summary is available to the calculator, not your individual quiz answers.
-                </p>
-              </div>
-            )}
+            <button 
+              onClick={nextStep}
+              className="px-10 py-5 bg-slate-900 text-white rounded-2xl text-xl font-bold hover:bg-slate-800 transition-all shadow-lg hover:shadow-xl active:scale-95 flex items-center gap-3"
+            >
+              Start My Journey <ChevronRight className="w-6 h-6" />
+            </button>
             <div className="grid grid-cols-3 gap-6 w-full max-w-3xl mt-12">
               <div className="p-6 bg-white rounded-3xl border border-slate-100 shadow-sm">
                 <MapPin className="w-8 h-8 text-blue-500 mb-3" />
@@ -806,7 +962,7 @@ export default function App() {
 
       case 'Location':
         return (
-          <QuizWrapper colors={COLORS} title="Where Will You Live?" description="Prices change depending on where you are in Texas!">
+          <QuizWrapper title="Where Will You Live?" description="Prices change depending on where you are in Texas!">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {[...activeRegions]
                 .sort((a, b) => a.majorCity.localeCompare(b.majorCity))
@@ -814,7 +970,7 @@ export default function App() {
                 <button
                   key={region.id}
                   onClick={() => {
-                    handleSelection('regionId', region.id);
+                    handleSelection('regionId' as any, region.id);
                     nextStep();
                   }}
                   className={`p-6 rounded-3xl text-left transition-all border-2 ${
@@ -827,16 +983,13 @@ export default function App() {
                   <div className="flex justify-between items-start">
                     <div>
                       <h3 className="font-bold text-xl text-slate-900 flex items-center gap-2">
-                        <LocationIcon region={region} />
-                        <span>{region.majorCity}</span>
+                        <span className="text-2xl">{region.emoji}</span> {region.majorCity}
                       </h3>
                       <p className="text-slate-500 text-sm font-medium uppercase tracking-wide">
                         {region.name}
                       </p>
                     </div>
-                    <div className="shrink-0">
-                      {state.regionId === region.id && <CheckCircle2 className="w-6 h-6" style={{ color: COLORS.selectedGreen }} />}
-                    </div>
+                    {state.regionId === region.id && <CheckCircle2 className="w-6 h-6" style={{ color: COLORS.selectedGreen }} />}
                   </div>
                 </button>
               ))}
@@ -846,7 +999,7 @@ export default function App() {
 
       case 'Housing':
         return (
-          <QuizWrapper colors={COLORS} title="Choose Your New Home" description="Where will you hang your hat?">
+          <QuizWrapper title="Choose Your New Home" description="Where will you hang your hat?">
             <HousingSelectionStep
               options={HOUSING_OPTIONS}
               category="housing"
@@ -860,75 +1013,72 @@ export default function App() {
 
       case 'Phone':
         return (
-          <QuizWrapper colors={COLORS} title="Choose Your Phone" description="Decide whether to keep your current device, go refurbished, or buy new.">
+          <QuizWrapper title="Choose Your Phone" description="Decide whether to keep your current device, go refurbished, or buy new.">
             <PhoneSelectionStep
               state={state}
               onSelect={handleSelection}
+              onNext={nextStep}
               deviceOptions={activePhoneDeviceOptions}
-              colors={COLORS}
             />
           </QuizWrapper>
         );
 
       case 'Phone Plan':
         return (
-          <QuizWrapper colors={COLORS} title="Choose Your Phone Plan">
+          <QuizWrapper title="Choose Your Phone Plan">
             <PhonePlanSelectionStep
               options={activePhonePlanOptions}
               category="phonePlan"
               state={state}
               onSelect={handleSelection}
-              colors={COLORS}
             />
           </QuizWrapper>
         );
 
       case 'Internet':
         return (
-          <QuizWrapper colors={COLORS} title="Choose Your Internet Plan" description="Fast speeds for gaming and streaming.">
+          <QuizWrapper title="Choose Your Internet Plan" description="Fast speeds for gaming and streaming.">
             <InternetSelectionStep
               options={activeInternetOptions.filter((o: any) => !o.region_id || o.region_id === state.regionId)}
               category="internet"
               state={state}
               onSelect={handleSelection}
-              usageBadgeStyles={USAGE_BADGE_STYLES}
-              usageBadgeIcons={USAGE_BADGE_ICONS}
+              onNext={nextStep}
             />
           </QuizWrapper>
         );
 
       case 'Utilities':
         return (
-          <QuizWrapper colors={COLORS} title="Choose Your Utilities" description="Don't forget the basics! Select all that apply.">
+          <QuizWrapper title="Choose Your Utilities" description="Don't forget the basics! Select all that apply.">
             <UtilitiesSelectionStep
               options={activeUtilityOptions.filter((o: any) => !o.region_id || o.region_id === state.regionId)}
               category="utilities"
               state={state}
               onToggle={toggleMultiSelection}
+              onNext={nextStep}
               multiplier={currentRegion.costMultiplier}
               requiredUtilityIds={state.selections.housing && state.selections.housing !== 'family' ? REQUIRED_INDEPENDENT_UTILITY_IDS : []}
-              essentialUtilityIds={REQUIRED_INDEPENDENT_UTILITY_IDS}
-              colors={COLORS}
             />
           </QuizWrapper>
         );
 
       case 'Streaming':
         return (
-          <QuizWrapper colors={COLORS} title="Choose Your Streaming Plans" description="What will you watch and listen to? Compare with ads and premium options.">
+          <QuizWrapper title="Choose Your Streaming Plans" description="What will you watch and listen to? Compare with ads and premium options.">
             <StreamingSelectionStep
               options={activeStreamingOptions}
               category="streaming"
               state={state}
               onToggle={toggleMultiSelection}
-              colors={COLORS}
+              onNext={nextStep}
             />
           </QuizWrapper>
         );
 
       case 'Subscriptions':
         return (
-          <QuizWrapper colors={COLORS} title="More Subscriptions" description="Extra perks for your lifestyle.">
+          <QuizWrapper title="More Subscriptions" description="Extra perks for your lifestyle.">
             <MultiSelectionStep
               options={activeSubscriptionOptions}
               category="subscriptions"
@@ -941,11 +1091,12 @@ export default function App() {
 
       case 'Food':
         return (
-          <QuizWrapper colors={COLORS} title="Food & Groceries" description="How do you plan to eat?">
-            <GrocerySelectionStep
-              groceryItems={GROCERY_GAME_ITEMS}
-              groceryCart={state.selections.foodCart}
-              onCartChange={handleFoodCartChange}
+          <QuizWrapper title="Food & Groceries" description="How do you plan to eat?">
+            <FoodSelectionStep
+              options={FOOD_OPTIONS}
+              category="food"
+              state={state}
+              onSelect={handleSelection}
               multiplier={currentRegion.costMultiplier}
             />
           </QuizWrapper>
@@ -953,7 +1104,7 @@ export default function App() {
 
       case 'Transportation':
         return (
-          <QuizWrapper colors={COLORS} title="Choose Your Transportation" description="How will you get around Texas?">
+          <QuizWrapper title="Choose Your Transportation" description="How will you get around Texas?">
             <TransportationGridStep
               state={state}
               onSelect={handleSelection}
@@ -964,84 +1115,74 @@ export default function App() {
 
       case 'Fuel':
         return (
-          <QuizWrapper colors={COLORS} title="Choose Your Fuel Plan" description="Fuel is a recurring monthly cost for most vehicles.">
+          <QuizWrapper title="Choose Your Fuel Plan" description="Fuel is a recurring monthly cost for most vehicles.">
             <FuelPlanSelectionStep
               state={state}
               onSelect={handleSelection}
               fuelPlanType={fuelPlanType}
               options={availableFuelOptions}
               fuelPriceEnvironment={state.selections.fuelPriceEnvironment}
-              fuelPriceEnvironments={FUEL_PRICE_ENVIRONMENTS}
-              getFuelPriceEnvironment={getFuelPriceEnvironment}
-              getFuelMonthlyCost={getFuelMonthlyCost}
-              usageBadgeStyles={USAGE_BADGE_STYLES}
-              usageBadgeIcons={USAGE_BADGE_ICONS}
-              headerBlue={COLORS.headerBlue}
             />
           </QuizWrapper>
         );
 
       case 'Clothing':
         return (
-          <QuizWrapper
-            colors={COLORS}
-            title="Build Your Closet"
-            description="Choose the clothes and accessories you actually use, then see what your wardrobe might cost over time."
-          >
-            <ClothingGameStep
-              clothingItems={activeClothingGameItems}
-              clothingCloset={state.selections.clothingCloset}
-              onClosetChange={handleClothingClosetChange}
+          <QuizWrapper title="Choose Your Clothing Package" description="What's your style budget?">
+            <ClothingSelectionStep
+              options={activeClothingOptions}
+              category="clothing"
+              state={state}
+              onSelect={handleSelection}
+              onNext={nextStep}
             />
           </QuizWrapper>
         );
 
       case 'Insurance Info':
         return (
-          <QuizWrapper colors={COLORS} title="All About Insurance">
+          <QuizWrapper title="All About Insurance">
             <InsuranceInfoStep onNext={nextStep} />
           </QuizWrapper>
         );
 
       case 'Insurance Selection':
         return (
-          <QuizWrapper colors={COLORS} title="Choose Your Insurance" description="Protect your future self.">
+          <QuizWrapper title="Choose Your Insurance" description="Protect your future self.">
             <InsuranceSelectionStep
               options={activeInsuranceOptions}
               category="insurance"
               state={state}
               onToggle={toggleMultiSelection}
+              onNext={nextStep}
               multiplier={currentRegion.costMultiplier}
-              colors={COLORS}
-              categoryEmojis={CATEGORY_EMOJIS}
             />
           </QuizWrapper>
         );
 
       case 'Other Services':
         return (
-          <QuizWrapper colors={COLORS} title="Other Services" description="The little things that add up.">
-            <OtherServicesStep
+          <QuizWrapper title="Other Services" description="The little things that add up.">
+            <MultiSelectionStep
+              options={OTHER_OPTIONS}
+              category="other"
               state={state}
-              onChange={handleOtherServicesChange}
+              onToggle={toggleMultiSelection}
+              onNext={nextStep}
             />
           </QuizWrapper>
         );
 
       case 'Results':
-        return <ResultsStep state={state} monthlyTotal={monthlyTotal} annualTotal={annualTotal} recommendedSalary={recommendedSalary} onReset={resetQuiz} userId={session?.user?.id} regionOptions={activeRegions} internetOptions={activeInternetOptions} utilityOptions={activeUtilityOptions} streamingOptions={activeStreamingOptions} subscriptionOptions={activeSubscriptionOptions} insuranceOptions={activeInsuranceOptions} phoneOptions={activePhoneOptions} phonePlanOptions={activePhonePlanOptions} transportOptions={activeTransportOptions} riasecSummary={riasecSummary} isCalculatorDataLoading={calculatorDataLoading} />;
+        return <ResultsStep state={state} monthlyTotal={monthlyTotal} annualTotal={annualTotal} recommendedSalary={recommendedSalary} onReset={resetQuiz} userId={session?.user?.id} regionOptions={activeRegions} internetOptions={activeInternetOptions} utilityOptions={activeUtilityOptions} streamingOptions={activeStreamingOptions} subscriptionOptions={activeSubscriptionOptions} clothingOptions={activeClothingOptions} insuranceOptions={activeInsuranceOptions} phoneOptions={activePhoneOptions} phonePlanOptions={activePhonePlanOptions} transportOptions={activeTransportOptions} />;
 
       default:
         return <div>Step not found</div>;
     }
   };
 
-  if (routePath === '/riasec') {
-    return <RiasecQuiz onTryLifestyle={handleRiasecHandoff} />;
-  }
-
   if (!session) {
-    if (routePath === '/admin') {
+    if (window.location.pathname === '/admin') {
       return (
         <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6">
           <PilotAuthGate />
@@ -1056,137 +1197,414 @@ export default function App() {
     );
   }
 
-  if (routePath === '/admin') {
+  if (window.location.pathname === '/admin') {
     return <AdminPage />;
   }
 
-  if (!hasCompletedRiasecSetup) {
-    return (
-      <RiasecSetup
-        onTakeQuiz={openRiasecQuiz}
-        onSubmitKnownCode={handleRiasecHandoff}
-        onSkip={handleRiasecSkip}
-      />
-    );
-  }
-
   return (
-    <>
-      <ModalShell
-        isOpen={isIntroVideoOpen}
-        onClose={closeIntroVideo}
-        title="Welcome to the Lifestyle Calculator"
-        subtitle="Watch this quick introduction before you begin. You can rewatch it anytime from the home screen."
-        eyebrow="Introduction Video"
-        labelledBy="intro-video-modal-title"
-        footerLabel="Close Video"
-        maxWidthClassName="max-w-4xl"
-        bodyClassName="space-y-4 p-5 sm:p-6"
-      >
-        <div className="overflow-hidden rounded-[28px] border border-slate-100 bg-slate-950 shadow-sm">
-          <div className="aspect-video w-full">
-            {introVideoEmbedUrl ? (
-              <iframe
-                src={introVideoEmbedUrl}
-                title="Lifestyle Calculator introduction video"
-                className="h-full w-full"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                allowFullScreen
-                referrerPolicy="strict-origin-when-cross-origin"
-              />
-            ) : (
-              <div className="flex h-full w-full flex-col items-center justify-center gap-4 bg-[radial-gradient(circle_at_top,rgba(51,114,178,0.28),rgba(15,23,42,0.96))] px-6 text-center text-white">
-                <div className="rounded-full border border-white/20 bg-white/10 px-4 py-2 text-xs font-black uppercase tracking-[0.24em] text-blue-100">
-                  Video Placeholder
-                </div>
-                <div className="space-y-2">
-                  <p className="text-2xl font-black sm:text-3xl">Introduction video will appear here</p>
-                  <p className="max-w-2xl text-sm font-medium leading-relaxed text-slate-200 sm:text-base">
-                    Replace <span className="font-black text-white">INTRO_VIDEO_URL</span> in <span className="font-black text-white">src/App.tsx</span> with your final YouTube share or embed link.
-                  </p>
-                </div>
+    <div className="relative min-h-screen bg-slate-50 font-sans text-slate-900 pb-52 sm:pb-32">
+      <Nav
+        session={session}
+        stepLabel={showHistory ? 'History' : STEPS[state.currentStep]}
+        currentQuestionStep={currentQuestionStep}
+        totalQuestionSteps={totalQuestionSteps}
+        progressPercent={progressPercent}
+        showProgress={!showHistory && state.currentStep > 0 && state.currentStep < STEPS.length - 1}
+        onReset={resetQuiz}
+        onToggleHistory={() => setShowHistory(!showHistory)}
+      />
+
+      <main className="max-w-5xl mx-auto px-6 pt-8">
+        {showHistory ? (
+          <HistoryPage userId={session.user.id} />
+        ) : (
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={state.currentStep}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.3 }}
+            >
+              {renderStep()}
+            </motion.div>
+          </AnimatePresence>
+        )}
+      </main>
+
+      <FeedbackTool stepName={showHistory ? 'History' : STEPS[state.currentStep]} userId={session.user.id} />
+
+      {!showHistory && state.currentStep > 0 && state.currentStep < STEPS.length - 1 && (
+        <motion.footer 
+          initial={{ y: 100 }}
+          animate={{ y: 0 }}
+          className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100 p-6 z-50 shadow-2xl"
+        >
+          <div className="max-w-5xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-6">
+            <div className="flex items-center gap-8">
+              <div className="flex flex-col">
+                <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Monthly Total</span>
+                <span className="text-3xl font-black text-slate-900">${monthlyTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
               </div>
-            )}
-          </div>
-        </div>
-      </ModalShell>
-
-      <div className="relative min-h-screen bg-slate-50 font-sans text-slate-900 pb-52 sm:pb-32">
-        <Nav
-          sessionEmail={session.user.email}
-          stepLabel={showHistory ? 'History' : STEPS[state.currentStep]}
-          currentQuestionStep={currentQuestionStep}
-          totalQuestionSteps={totalQuestionSteps}
-          progressPercent={progressPercent}
-          showProgress={!showHistory && state.currentStep > 0 && state.currentStep < STEPS.length - 1}
-          onReset={resetQuiz}
-          onToggleHistory={() => setShowHistory(!showHistory)}
-          onSignOut={() => supabase.auth.signOut()}
-        />
-
-        <main className="max-w-5xl mx-auto px-6 pt-8">
-          {showHistory ? (
-            <HistoryPage userId={session.user.id} />
-          ) : (
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={state.currentStep}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.3 }}
-              >
-                {renderStep()}
-              </motion.div>
-            </AnimatePresence>
-          )}
-        </main>
-
-        <FeedbackTool stepName={showHistory ? 'History' : STEPS[state.currentStep]} userId={session.user.id} />
-
-        {!showHistory && state.currentStep > 0 && state.currentStep < STEPS.length - 1 && (
-          <motion.footer 
-            initial={{ y: 100 }}
-            animate={{ y: 0 }}
-            className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100 p-6 z-50 shadow-2xl"
-          >
-            <div className="max-w-5xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-6">
-              <div className="flex items-center gap-8">
-                <div className="flex flex-col">
-                  <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Monthly Total</span>
-                  <span className="text-3xl font-black text-slate-900">${monthlyTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                </div>
-                <div className="h-10 w-px bg-slate-100 hidden sm:block" />
-                <div className="flex flex-col">
-                  <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Annual Salary Needed</span>
-                  <span className="text-xl font-bold text-orange-500">${recommendedSalary.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
-                </div>
-              </div>
-              
-              <div className="flex gap-4 w-full sm:w-auto">
-                <button 
-                  onClick={prevStep}
-                  className="flex-1 sm:flex-none px-6 py-4 bg-slate-100 text-slate-600 rounded-2xl font-bold hover:bg-slate-200 transition-all flex items-center justify-center gap-2"
-                >
-                  <ChevronLeft className="w-5 h-5" /> Back
-                </button>
-                <button 
-                  onClick={nextStep}
-                  disabled={!canAdvanceCurrentStep}
-                  className="flex-1 sm:flex-none px-10 py-4 bg-orange-500 text-white rounded-2xl font-bold hover:bg-orange-600 transition-all shadow-lg shadow-orange-100 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-orange-500"
-                >
-                  Next Step <ChevronRight className="w-5 h-5" />
-                </button>
+              <div className="h-10 w-px bg-slate-100 hidden sm:block" />
+              <div className="flex flex-col">
+                <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Annual Salary Needed</span>
+                <span className="text-xl font-bold text-orange-500">${recommendedSalary.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
               </div>
             </div>
-          </motion.footer>
-        )}
-      </div>
-    </>
+            
+            <div className="flex gap-4 w-full sm:w-auto">
+              <button 
+                onClick={prevStep}
+                className="flex-1 sm:flex-none px-6 py-4 bg-slate-100 text-slate-600 rounded-2xl font-bold hover:bg-slate-200 transition-all flex items-center justify-center gap-2"
+              >
+                <ChevronLeft className="w-5 h-5" /> Back
+              </button>
+              <button 
+                onClick={nextStep}
+                disabled={!canAdvanceCurrentStep}
+                className="flex-1 sm:flex-none px-10 py-4 bg-orange-500 text-white rounded-2xl font-bold hover:bg-orange-600 transition-all shadow-lg shadow-orange-100 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-orange-500"
+              >
+                Next Step <ChevronRight className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+        </motion.footer>
+      )}
+    </div>
   );
 }
 
-// Remaining local selection helpers.
+function SelectionStep({ options, category, state, onSelect, multiplier = 1 }: any) {
+  const selectedId = state.selections[category];
+  
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+      {options.map((opt: any) => {
+        const isSelected = selectedId === opt.id;
+        const usageLabel = opt.usageLabel as string | undefined;
+        const bestFor = opt.bestFor as string[] | undefined;
+
+        return (
+          <button
+            key={opt.id}
+            onClick={() => onSelect(category, opt.id)}
+            className={`relative flex flex-col items-center text-center p-6 transition-all border-2 rounded-3xl group ${
+              isSelected 
+                ? 'border-[#10B981] ring-2 ring-emerald-50 bg-emerald-50/10' 
+                : 'border-slate-100 hover:border-slate-200 bg-white'
+            }`}
+          >
+            {opt.image && (
+              <div className="h-32 w-full flex items-center justify-center mb-4">
+                <img
+                  src={opt.image}
+                  alt={opt.name}
+                  className="max-h-full object-contain rounded-xl"
+                  referrerPolicy="no-referrer"
+                />
+              </div>
+            )}
+            <div className="text-[#3372B2] font-black text-2xl mb-2">
+              <span className="mr-2">{opt.emoji}</span>
+              ${(opt.monthlyCost * multiplier).toLocaleString()}/mo
+            </div>
+            {usageLabel && (
+              <div className={`mb-3 inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-black ${USAGE_BADGE_STYLES[usageLabel] || 'bg-slate-50 text-slate-600 border-slate-200'}`}>
+                <span>{USAGE_BADGE_ICONS[usageLabel]}</span>
+                {usageLabel}
+              </div>
+            )}
+            <div className="space-y-1">
+              <p className="text-[#3372B2] font-bold text-lg">{opt.name}</p>
+              <p className="text-[#2D9B8E] text-sm font-medium">{opt.description}</p>
+            </div>
+            {bestFor && (
+              <div className="mt-5 w-full rounded-2xl bg-slate-50 p-4 text-left">
+                <p className="mb-3 text-xs font-black uppercase tracking-widest text-[#3372B2]">Best For:</p>
+                <ul className="space-y-2">
+                  {bestFor.map((item) => (
+                    <li key={item} className="flex items-start gap-2 text-sm font-medium leading-snug text-slate-600">
+                      <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[#2D9B8E]" />
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {isSelected && (
+              <div className="absolute -top-3 -right-3 w-8 h-8 bg-[#10B981] border-4 border-white text-white rounded-full flex items-center justify-center shadow-md">
+                <Check className="w-4 h-4 stroke-[4px]" />
+              </div>
+            )}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function ClothingSelectionStep({ options, category, state, onSelect, multiplier = 1 }: any) {
+  const selectedId = state.selections[category];
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+      {options.map((opt: any) => {
+        const isSelected = selectedId === opt.id;
+
+        return (
+          <button
+            key={opt.id}
+            onClick={() => onSelect(category, opt.id)}
+            className={`relative flex flex-col items-center text-center p-6 transition-all duration-200 ease-out border-2 rounded-3xl group bg-white ${
+              isSelected
+                ? 'border-[#10B981] ring-2 ring-emerald-50 bg-emerald-50/10'
+                : 'border-slate-100 hover:border-[#D6E4F0] hover:bg-[#F3F7FB] hover:-translate-y-0.5 hover:shadow-[0_2px_6px_rgba(0,0,0,0.05)]'
+            }`}
+          >
+            {opt.image && (
+              <div className="mb-5 h-36 w-full overflow-hidden rounded-2xl bg-slate-100">
+                <img
+                  src={opt.image}
+                  alt={opt.name}
+                  className="h-full w-full object-cover transition-transform duration-200 ease-out group-hover:scale-[1.03]"
+                  referrerPolicy="no-referrer"
+                />
+              </div>
+            )}
+            <div className="text-[#3372B2] font-black text-2xl mb-2">
+              <span className="mr-2">{opt.emoji}</span>
+              ${(opt.monthlyCost * multiplier).toLocaleString()}/mo
+            </div>
+            <div className="space-y-1">
+              <p className="text-[#3372B2] font-bold text-lg">{opt.name}</p>
+              <p className="text-[#2D9B8E] text-sm font-medium">{opt.description}</p>
+            </div>
+            {isSelected && (
+              <div className="absolute -top-3 -right-3 w-8 h-8 bg-[#10B981] border-4 border-white text-white rounded-full flex items-center justify-center shadow-md">
+                <Check className="w-4 h-4 stroke-[4px]" />
+              </div>
+            )}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function BeforeYouChooseCallout({
+  body,
+  icon,
+  actionIcon,
+  onLessonClick,
+}: {
+  body: string;
+  icon: React.ReactNode;
+  actionIcon: React.ReactNode;
+  onLessonClick: () => void;
+}) {
+  const shouldReduceMotion = useReducedMotion();
+
+  return (
+    <motion.div
+      initial={shouldReduceMotion ? false : { opacity: 0, y: 8 }}
+      animate={shouldReduceMotion ? undefined : { opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, ease: 'easeOut' }}
+      className="my-2 flex flex-col gap-5 rounded-3xl border border-blue-100 bg-blue-50/80 p-6 shadow-lg shadow-blue-100/50 sm:flex-row sm:items-center sm:justify-between"
+    >
+      <div className="space-y-2">
+        <div className="flex items-center gap-3">
+          <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white text-[#3372B2] shadow-sm" aria-hidden="true">
+            {icon}
+          </span>
+          <p className="text-base font-black text-[#3372B2]">Before You Choose</p>
+        </div>
+        <p className="text-sm font-medium leading-relaxed text-slate-600">{body}</p>
+      </div>
+      <button
+        onClick={onLessonClick}
+        className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#3372B2] px-5 py-3 text-sm font-bold text-white shadow-lg shadow-blue-100 transition-all hover:bg-[#2B5FA3] active:scale-95 sm:shrink-0"
+      >
+        {actionIcon}
+        Quick Lesson
+      </button>
+    </motion.div>
+  );
+}
+
+function InternetSelectionStep({ options, category, state, onSelect, onNext, multiplier = 1 }: any) {
+  const [showLesson, setShowLesson] = useState(false);
+  const enhancedOptions = useMemo(() => options.map((opt: any) => ({
+    ...opt,
+    ...(INTERNET_PLAN_DETAILS[opt.id] || {}),
+  })), [options]);
+
+  const explanationBlocks = [
+    {
+      title: 'Speed (Mbps)',
+      body: 'Speed is how fast your internet is. Higher speeds mean faster downloads, smoother streaming, and less lag.',
+    },
+    {
+      title: 'Devices',
+      body: 'The more devices connected (phones, TVs, laptops), the more speed you may need.',
+    },
+    {
+      title: 'Usage',
+      body: 'What you do online matters. Watching videos and gaming use more internet than browsing or homework.',
+    },
+  ];
+
+  const speedExamples = [
+    {
+      title: '100-300 Mbps',
+      body: 'Good for small households, browsing, and light streaming.',
+    },
+    {
+      title: '400-700 Mbps',
+      body: 'Good for families, multiple devices, HD streaming.',
+    },
+    {
+      title: '1 Gig (1000 Mbps)',
+      body: 'Best for heavy streaming, gaming, and many devices.',
+    },
+  ];
+
+  const connectionTypes = [
+    {
+      title: 'Fiber',
+      body: 'Faster and more reliable, especially for uploads and gaming.',
+    },
+    {
+      title: 'Cable',
+      body: 'Widely available and works well for most households.',
+    },
+  ];
+
+  return (
+    <div className="space-y-8">
+      <BeforeYouChooseCallout
+        body="Take a quick 2-minute look at what home internet plans include."
+        icon={<Wifi className="h-5 w-5" />}
+        actionIcon={<Wifi className="w-4 h-4" />}
+        onLessonClick={() => setShowLesson(true)}
+      />
+
+      <SelectionStep
+        options={enhancedOptions}
+        category={category}
+        state={state}
+        onSelect={onSelect}
+        onNext={onNext}
+        multiplier={multiplier}
+      />
+
+      <AnimatePresence>
+        {showLesson && (
+          <motion.div
+            className="fixed inset-0 z-[250] flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setShowLesson(false)}
+          >
+            <motion.div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="internet-lesson-title"
+              className="max-h-[90vh] w-full max-w-3xl overflow-hidden rounded-3xl bg-white shadow-2xl"
+              initial={{ opacity: 0, y: 24, scale: 0.96 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 16, scale: 0.96 }}
+              transition={{ duration: 0.2 }}
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className="flex items-start justify-between gap-4 bg-[#3372B2] px-6 py-5 text-white">
+                <div>
+                  <p className="text-xs font-black uppercase tracking-widest text-blue-100">Internet Mini Lesson</p>
+                  <h2 id="internet-lesson-title" className="mt-1 text-2xl font-black">Quick Lesson: How Internet Plans Work</h2>
+                </div>
+                <button
+                  onClick={() => setShowLesson(false)}
+                  className="rounded-full bg-white/10 p-2 transition-colors hover:bg-white/20"
+                  aria-label="Close quick lesson"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              <div className="max-h-[65vh] overflow-y-auto p-6 sm:p-8">
+                <div className="space-y-6">
+                  <section className="rounded-2xl border border-slate-100 bg-slate-50 p-5">
+                    <h3 className="text-lg font-black text-[#3372B2]">What is home internet?</h3>
+                    <p className="mt-2 text-sm font-medium leading-relaxed text-slate-600">
+                      Home internet is what allows your household to connect to Wi-Fi for streaming, gaming, schoolwork, and more.
+                    </p>
+                  </section>
+
+                  <section className="space-y-3">
+                    <h3 className="text-lg font-black text-[#3372B2]">What are you paying for?</h3>
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                      {explanationBlocks.map((item) => (
+                        <div key={item.title} className="rounded-2xl border border-blue-100 bg-blue-50/70 p-4">
+                          <p className="font-black text-[#3372B2]">{item.title}</p>
+                          <p className="mt-2 text-sm font-medium leading-relaxed text-slate-600">{item.body}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+
+                  <section className="space-y-3">
+                    <h3 className="text-lg font-black text-[#3372B2]">What do speeds mean?</h3>
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                      {speedExamples.map((item) => (
+                        <div key={item.title} className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
+                          <p className="font-black text-slate-900">{item.title}</p>
+                          <p className="mt-2 text-sm font-medium leading-relaxed text-slate-600">{item.body}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+
+                  <section className="space-y-3 rounded-2xl border border-orange-100 bg-orange-50 p-5">
+                    <h3 className="text-lg font-black text-orange-600">Fiber vs Cable</h3>
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                      {connectionTypes.map((item) => (
+                        <div key={item.title} className="rounded-2xl bg-white p-4 shadow-sm">
+                          <p className="font-black text-orange-700">{item.title}</p>
+                          <p className="mt-2 text-sm font-medium leading-relaxed text-orange-900/80">{item.body}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+
+                  <section className="rounded-2xl border border-emerald-100 bg-emerald-50 p-5">
+                    <h3 className="text-lg font-black text-emerald-700">Think about it</h3>
+                    <p className="mt-2 text-sm font-medium leading-relaxed text-emerald-900/80">
+                      The best internet plan depends on how many people are using it and what they do online.
+                    </p>
+                    <p className="mt-4 rounded-xl bg-white px-4 py-3 text-sm font-black text-slate-800 shadow-sm">
+                      How many devices do you think would be connected to your internet at home?
+                    </p>
+                  </section>
+                </div>
+              </div>
+
+              <div className="border-t border-slate-100 bg-slate-50 px-6 py-4">
+                <button
+                  onClick={() => setShowLesson(false)}
+                  className="w-full rounded-xl bg-orange-500 px-5 py-3 font-bold text-white shadow-lg shadow-orange-100 transition-all hover:bg-orange-600 active:scale-[0.99]"
+                >
+                  Back to Plans
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
 function HousingSelectionStep({ options, category, state, onSelect, multiplier = 1 }: any) {
   const selectedId = state.selections[category];
   const [activeTooltip, setActiveTooltip] = useState<{id: string, type: 'info' | 'income'} | null>(null);
@@ -1202,7 +1620,6 @@ function HousingSelectionStep({ options, category, state, onSelect, multiplier =
         const isBuy = opt.id.includes('buy') || opt.name.toLowerCase().includes('buy');
         const isFamily = opt.monthlyCost === 0;
         const annualIncomeNeeded = calculateAnnualIncome(opt.monthlyCost);
-        const tooltip = activeTooltip?.id === opt.id ? activeTooltip : null;
 
         return (
           <div key={opt.id} className="relative flex flex-col md:flex-row gap-6 items-start">
@@ -1275,13 +1692,13 @@ function HousingSelectionStep({ options, category, state, onSelect, multiplier =
             </button>
 
             <AnimatePresence>
-              {tooltip && (
+              {activeTooltip?.id === opt.id && (
                 <motion.div
                   initial={{ opacity: 0, scale: 0.9, x: 20 }}
                   animate={{ opacity: 1, scale: 1, x: 0 }}
                   exit={{ opacity: 0, scale: 0.9, x: 20 }}
                   className={`absolute z-[100] left-full ml-4 top-0 w-72 p-6 rounded-2xl shadow-2xl text-sm font-medium leading-relaxed hidden xl:block ${
-                    tooltip.type === 'income'
+                    activeTooltip.type === 'income'
                       ? 'bg-lime-300 text-lime-900'
                       : isBuy
                       ? 'bg-orange-300 text-orange-900'
@@ -1289,7 +1706,7 @@ function HousingSelectionStep({ options, category, state, onSelect, multiplier =
                   }`}
                 >
                   <div className={`absolute top-1/2 -left-2 -translate-y-1/2 w-4 h-4 rotate-45 ${
-                    tooltip.type === 'income'
+                    activeTooltip.type === 'income'
                       ? 'bg-lime-300'
                       : isBuy
                       ? 'bg-orange-300'
@@ -1303,7 +1720,7 @@ function HousingSelectionStep({ options, category, state, onSelect, multiplier =
                     X
                   </button>
 
-                  {tooltip.type === 'income' ? (
+                  {activeTooltip.type === 'income' ? (
                     <div className="space-y-2">
                       <p className="font-bold text-base">What is Household Income?</p>
                       <p>Household income is the combined total gross earnings of all individuals aged 15 or older living in a housing unit, including family members and unrelated residents. It is a key financial metric used to evaluate economic stability, determine tax obligations, and qualify for loans or insurance.</p>
@@ -1330,10 +1747,341 @@ function HousingSelectionStep({ options, category, state, onSelect, multiplier =
   );
 }
 
+function UtilitiesSelectionStep({ options, category, state, onToggle, onNext, multiplier = 1, requiredUtilityIds = [] }: any) {
+  const [showLesson, setShowLesson] = useState(false);
+  const [activeElectricityInfo, setActiveElectricityInfo] = useState<Option | null>(null);
+  const selectedIds = state.selections[category] as string[];
+  const lockedNote = requiredUtilityIds.length
+    ? 'In this housing choice, water and trash are usually part of your monthly living costs.'
+    : undefined;
+  const essentialUtilities = options.filter((opt: any) => REQUIRED_INDEPENDENT_UTILITY_IDS.includes(opt.id));
+  const electricityOptions = options.filter((opt: any) => !REQUIRED_INDEPENDENT_UTILITY_IDS.includes(opt.id));
+
+  const utilityBlocks = [
+    {
+      title: 'Electricity',
+      body: 'Powers lights, appliances, air conditioning, and electronics.',
+    },
+    {
+      title: 'Water',
+      body: 'Provides running water for sinks, showers, laundry, and toilets.',
+    },
+    {
+      title: 'Trash',
+      body: 'Pays for garbage collection and pickup.',
+    },
+  ];
+
+  const renderUtilityCards = (opts: any[], gridClassName: string) => (
+    <div className={gridClassName}>
+      {opts.map((opt: Option) => {
+        const isSelected = selectedIds.includes(opt.id);
+        const isLocked = requiredUtilityIds.includes(opt.id);
+
+        const electricityInfo = ELECTRICITY_PLAN_INFO[opt.id];
+
+        return (
+          <div
+            key={opt.id}
+            role="button"
+            tabIndex={isLocked ? -1 : 0}
+            onClick={() => {
+              if (!isLocked) onToggle(category, opt.id);
+            }}
+            onKeyDown={(event) => {
+              if (!isLocked && (event.key === 'Enter' || event.key === ' ')) {
+                event.preventDefault();
+                onToggle(category, opt.id);
+              }
+            }}
+            aria-disabled={isLocked}
+            className={`relative p-6 rounded-3xl border-2 transition-all flex flex-col items-center text-center group bg-white ${isLocked ? 'cursor-default' : 'cursor-pointer'}`}
+            style={{
+              borderColor: isSelected ? COLORS.selectedGreen : COLORS.borderSlate,
+              backgroundColor: isSelected ? 'rgba(16, 185, 129, 0.04)' : 'white'
+            }}
+          >
+            {electricityInfo && (
+              <button
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setActiveElectricityInfo(opt);
+                }}
+                className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full border border-blue-100 bg-blue-50 text-sm font-black text-[#3372B2] transition-all hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                aria-label={`Learn more about ${opt.name}`}
+              >
+                i
+              </button>
+            )}
+            {isLocked && (
+              <span className="mb-3 rounded-full bg-emerald-50 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-emerald-700 border border-emerald-100">
+                Usually Needed
+              </span>
+            )}
+            <span className="text-4xl mb-3">{opt.emoji}</span>
+            <p className="font-bold mb-1" style={{ color: COLORS.headerBlue }}>{opt.name}</p>
+            <p className="text-sm font-medium mb-3" style={{ color: COLORS.valueTeal }}>{opt.description}</p>
+            {isLocked && lockedNote && (
+              <p className="mb-3 rounded-xl bg-slate-50 px-3 py-2 text-xs font-medium leading-relaxed text-slate-500">
+                {lockedNote}
+              </p>
+            )}
+            <p className="font-black text-xl" style={{ color: COLORS.headerBlue }}>
+              ${(opt.monthlyCost * multiplier).toLocaleString()}/mo
+            </p>
+            <div
+              className="mt-4 w-6 h-6 rounded-full border-2 flex items-center justify-center"
+              style={{
+                backgroundColor: isSelected ? COLORS.selectedGreen : 'transparent',
+                borderColor: isSelected ? COLORS.selectedGreen : COLORS.borderSlate
+              }}
+            >
+              {isSelected && <Check className="w-4 h-4 text-white" />}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+
+  return (
+    <div className="space-y-8">
+      <BeforeYouChooseCallout
+        body="Take a quick 2-minute look at the basic services homes usually need."
+        icon={<Zap className="h-5 w-5" />}
+        actionIcon={<Zap className="w-4 h-4" />}
+        onLessonClick={() => setShowLesson(true)}
+      />
+
+      {requiredUtilityIds.length > 0 && (
+        <div className="rounded-2xl border border-emerald-100 bg-emerald-50 px-5 py-4 text-sm font-medium leading-relaxed text-emerald-900/80">
+          <span className="font-black text-emerald-700">Auto-selected:</span> City Water and City Trash are usually part of monthly living costs for this housing choice.
+        </div>
+      )}
+
+      <div className="space-y-12">
+        <section className="space-y-4">
+          <div className="space-y-1">
+            <h3 className="text-2xl font-black" style={{ color: COLORS.headerBlue }}>Essential Utilities</h3>
+            <p className="text-sm font-medium text-slate-500">
+              These are basic services most homes need and are usually required.
+            </p>
+            <p className="text-xs font-bold uppercase tracking-widest text-slate-400">
+              These are usually included when you live on your own.
+            </p>
+          </div>
+          {renderUtilityCards(essentialUtilities, 'grid grid-cols-1 md:grid-cols-2 gap-6')}
+        </section>
+
+        <section className="space-y-4">
+          <div className="space-y-1">
+            <h3 className="text-2xl font-black" style={{ color: COLORS.headerBlue }}>Choose Your Electricity Plan</h3>
+            <p className="text-sm font-medium text-slate-500">
+              Choose one electricity provider based on your budget and usage.
+            </p>
+            <p className="text-xs font-bold uppercase tracking-widest text-slate-400">
+              You typically choose one electricity provider for your home.
+            </p>
+          </div>
+          {renderUtilityCards(electricityOptions, 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6')}
+        </section>
+      </div>
+
+      <ElectricityPlanInfoModal
+        option={activeElectricityInfo}
+        onClose={() => setActiveElectricityInfo(null)}
+      />
+
+      <AnimatePresence>
+        {showLesson && (
+          <motion.div
+            className="fixed inset-0 z-[250] flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setShowLesson(false)}
+          >
+            <motion.div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="utilities-lesson-title"
+              className="max-h-[90vh] w-full max-w-3xl overflow-hidden rounded-3xl bg-white shadow-2xl"
+              initial={{ opacity: 0, y: 24, scale: 0.96 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 16, scale: 0.96 }}
+              transition={{ duration: 0.2 }}
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className="flex items-start justify-between gap-4 bg-[#3372B2] px-6 py-5 text-white">
+                <div>
+                  <p className="text-xs font-black uppercase tracking-widest text-blue-100">Utilities Mini Lesson</p>
+                  <h2 id="utilities-lesson-title" className="mt-1 text-2xl font-black">Quick Lesson: How Utilities Work</h2>
+                </div>
+                <button
+                  onClick={() => setShowLesson(false)}
+                  className="rounded-full bg-white/10 p-2 transition-colors hover:bg-white/20"
+                  aria-label="Close quick lesson"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              <div className="max-h-[65vh] overflow-y-auto p-6 sm:p-8">
+                <div className="space-y-6">
+                  <section className="rounded-2xl border border-slate-100 bg-slate-50 p-5">
+                    <h3 className="text-lg font-black text-[#3372B2]">What are utilities?</h3>
+                    <p className="mt-2 text-sm font-medium leading-relaxed text-slate-600">
+                      Utilities are the basic services needed to live in a home, apartment, or other place to live. These services usually include electricity, water, and trash pickup.
+                    </p>
+                  </section>
+
+                  <section className="rounded-2xl border border-orange-100 bg-orange-50 p-5">
+                    <h3 className="text-lg font-black text-orange-600">Why do utilities matter?</h3>
+                    <p className="mt-2 text-sm font-medium leading-relaxed text-orange-900/80">
+                      Utilities are part of the monthly cost of living. Even if rent seems affordable, utilities can increase how much you spend each month.
+                    </p>
+                  </section>
+
+                  <section className="space-y-3">
+                    <h3 className="text-lg font-black text-[#3372B2]">Common types of utilities</h3>
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                      {utilityBlocks.map((item) => (
+                        <div key={item.title} className="rounded-2xl border border-blue-100 bg-blue-50/70 p-4">
+                          <p className="font-black text-[#3372B2]">{item.title}</p>
+                          <p className="mt-2 text-sm font-medium leading-relaxed text-slate-600">{item.body}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+
+                  <section className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
+                    <h3 className="text-lg font-black text-[#3372B2]">Which utilities depend on where you live?</h3>
+                    <p className="mt-2 text-sm font-medium leading-relaxed text-slate-600">
+                      Some utilities depend on your housing choice. For example, someone living in a house or apartment may need to pay for water and trash, while someone living at home with family may not pay those bills directly.
+                    </p>
+                  </section>
+
+                  <section className="rounded-2xl border border-emerald-100 bg-emerald-50 p-5">
+                    <h3 className="text-lg font-black text-emerald-700">Think about it</h3>
+                    <p className="mt-2 text-sm font-medium leading-relaxed text-emerald-900/80">
+                      When people move into their own place, they often have to pay more than just rent. Utilities are one of the extra monthly costs that can affect a budget.
+                    </p>
+                    <p className="mt-4 rounded-xl bg-white px-4 py-3 text-sm font-black text-slate-800 shadow-sm">
+                      Which utility do you think people use every day without thinking about it?
+                    </p>
+                  </section>
+                </div>
+              </div>
+
+              <div className="border-t border-slate-100 bg-slate-50 px-6 py-4">
+                <button
+                  onClick={() => setShowLesson(false)}
+                  className="w-full rounded-xl bg-orange-500 px-5 py-3 font-bold text-white shadow-lg shadow-orange-100 transition-all hover:bg-orange-600 active:scale-[0.99]"
+                >
+                  Back to Utilities
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+function ElectricityPlanInfoModal({ option, onClose }: { option: Option | null; onClose: () => void }) {
+  const info = option ? ELECTRICITY_PLAN_INFO[option.id] : null;
+
+  return (
+    <AnimatePresence>
+      {option && info && (
+        <motion.div
+          className="fixed inset-0 z-[250] flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          onClick={onClose}
+        >
+          <motion.div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="electricity-info-title"
+            className="max-h-[90vh] w-full max-w-2xl overflow-hidden rounded-3xl bg-white shadow-2xl"
+            initial={{ opacity: 0, y: 24, scale: 0.96 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 16, scale: 0.96 }}
+            transition={{ duration: 0.2 }}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-4 bg-[#3372B2] px-6 py-5 text-white">
+              <div>
+                <span className="inline-flex rounded-full bg-white/15 px-3 py-1 text-xs font-black uppercase tracking-widest text-blue-50">
+                  {info.tag}
+                </span>
+                <h2 id="electricity-info-title" className="mt-2 text-2xl font-black">{option.name}</h2>
+                <p className="mt-1 text-sm font-bold text-blue-100">What makes this plan unique?</p>
+              </div>
+              <button
+                onClick={onClose}
+                className="rounded-full bg-white/10 p-2 transition-colors hover:bg-white/20"
+                aria-label="Close electricity plan info"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="max-h-[65vh] overflow-y-auto p-6 sm:p-8">
+              <div className="space-y-5">
+                <section className="rounded-2xl border border-blue-100 bg-blue-50/70 p-5">
+                  <h3 className="text-lg font-black text-[#3372B2]">What it is</h3>
+                  <p className="mt-2 text-sm font-medium leading-relaxed text-slate-600">{info.what}</p>
+                </section>
+
+                <section className="rounded-2xl border border-emerald-100 bg-emerald-50 p-5">
+                  <h3 className="text-lg font-black text-emerald-700">Why someone might choose it</h3>
+                  <p className="mt-2 text-sm font-medium leading-relaxed text-emerald-900/80">{info.why}</p>
+                </section>
+
+                <section className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
+                  <h3 className="text-lg font-black text-[#3372B2]">What makes it different</h3>
+                  <ul className="mt-3 space-y-2">
+                    {info.different.map((item) => (
+                      <li key={item} className="flex items-start gap-2 text-sm font-medium leading-relaxed text-slate-600">
+                        <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#2D9B8E]" />
+                        <span>{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="mt-4 rounded-xl bg-slate-50 px-4 py-3 text-sm font-black text-slate-700">
+                    {info.takeaway}
+                  </p>
+                </section>
+
+                <p className="rounded-2xl border border-orange-100 bg-orange-50 px-4 py-3 text-sm font-medium leading-relaxed text-orange-900/80">
+                  Electricity plans can look similar, but small differences like fixed rates, bill credits, and auto pay can affect how your monthly bill feels.
+                </p>
+              </div>
+            </div>
+
+            <div className="border-t border-slate-100 bg-slate-50 px-6 py-4">
+              <button
+                onClick={onClose}
+                className="w-full rounded-xl bg-orange-500 px-5 py-3 font-bold text-white shadow-lg shadow-orange-100 transition-all hover:bg-orange-600 active:scale-[0.99]"
+              >
+                Back to Electricity Plans
+              </button>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+
 function MultiSelectionStep({ options, category, state, onToggle, multiplier = 1, lockedIds = [], lockedNote }: any) {
   const selectedIds = state.selections[category] as string[];
   const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
-  const [activeInfoOption, setActiveInfoOption] = useState<Option | null>(null);
 
   const groupedOptions = useMemo(() => {
     const groups: Record<string, any[]> = {};
@@ -1365,35 +2113,20 @@ function MultiSelectionStep({ options, category, state, onToggle, multiplier = 1
       {opts.map((opt: Option) => {
         const isSelected = selectedIds.includes(opt.id);
         const isLocked = lockedIds.includes(opt.id);
-        const info = SUBSCRIPTION_OPTION_INFO[opt.id];
 
         return (
-          <div
+          <button
             key={opt.id}
-            role="button"
-            tabIndex={isLocked ? -1 : 0}
             onClick={() => {
               if (!isLocked) onToggle(category, opt.id);
             }}
-            onKeyDown={(event) => {
-              if (!isLocked && (event.key === 'Enter' || event.key === ' ')) {
-                event.preventDefault();
-                onToggle(category, opt.id);
-              }
-            }}
             aria-disabled={isLocked}
-            className={`relative p-6 rounded-3xl border-2 transition-all flex flex-col items-center text-center group bg-white ${isLocked ? 'cursor-default' : 'cursor-pointer'}`}
+            className={`p-6 rounded-3xl border-2 transition-all flex flex-col items-center text-center group bg-white ${isLocked ? 'cursor-default' : ''}`}
             style={{
               borderColor: isSelected ? COLORS.selectedGreen : COLORS.borderSlate,
               backgroundColor: isSelected ? 'rgba(16, 185, 129, 0.04)' : 'white'
             }}
           >
-            {info && (
-              <InfoButton
-                label={`Learn more about ${opt.name}`}
-                onClick={() => setActiveInfoOption(opt)}
-              />
-            )}
             {isLocked && (
               <span className="mb-3 rounded-full bg-emerald-50 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-emerald-700 border border-emerald-100">
                 Usually Needed
@@ -1419,7 +2152,7 @@ function MultiSelectionStep({ options, category, state, onToggle, multiplier = 1
             >
               {isSelected && <Check className="w-4 h-4 text-white" />}
             </div>
-          </div>
+          </button>
         );
       })}
     </div>
@@ -1465,7 +2198,171 @@ function MultiSelectionStep({ options, category, state, onToggle, multiplier = 1
       ) : (
         renderOptionGrid(options)
       )}
-      <SubscriptionInfoModal
+    </div>
+  );
+}
+
+function InsuranceSelectionStep({ options, category, state, onToggle, multiplier = 1 }: any) {
+  const selectedIds = state.selections[category] as string[];
+  const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
+  const [priority, setPriority] = useState<InsurancePriority | null>(null);
+  const [activeInfoOption, setActiveInfoOption] = useState<Option | null>(null);
+  const groups = useMemo(() => {
+    const grouped: Record<string, any[]> = {};
+    options.forEach((opt: any) => {
+      const groupName = opt.category || 'General';
+      if (!grouped[groupName]) grouped[groupName] = [];
+      grouped[groupName].push(opt);
+    });
+    return grouped;
+  }, [options]);
+  const categoryOrder = ['Auto', 'Home', 'Health', 'Dental', 'Vision', 'Life', 'General'];
+  const orderedGroups = categoryOrder
+    .filter((groupName) => groups[groupName]?.length)
+    .map((groupName) => [groupName, groups[groupName]] as const);
+
+  const promptOptions: InsurancePriority[] = ['Saving money', 'Being protected', 'Regular care'];
+
+  return (
+    <div className="space-y-8">
+      <div className="rounded-3xl border border-blue-100 bg-blue-50/80 p-6 shadow-lg shadow-blue-100/50">
+        <p className="text-lg font-black text-[#3372B2]">What matters most to you?</p>
+        <p className="mt-2 text-sm font-medium leading-relaxed text-slate-600">
+          Your answer can help you compare price, protection, and regular care before picking insurance options.
+        </p>
+        <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
+          {promptOptions.map((option) => (
+            <button
+              key={option}
+              onClick={() => setPriority(current => current === option ? null : option)}
+              className={`rounded-xl border px-4 py-3 text-sm font-black transition-all ${
+                priority === option
+                  ? 'border-[#10B981] bg-emerald-50 text-emerald-700 shadow-sm'
+                  : 'border-slate-200 bg-white text-slate-600 hover:border-[#D6E4F0] hover:bg-[#F3F7FB]'
+              }`}
+            >
+              {option}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="space-y-6">
+        {orderedGroups.map(([catName, opts]) => (
+          <div key={catName} className="space-y-3">
+            <button
+              onClick={() => setExpandedCategories(prev => ({ ...prev, [catName]: !prev[catName] }))}
+              className="flex items-center gap-2 w-full text-left group"
+            >
+              <div className={`transition-transform duration-200 ${expandedCategories[catName] ? 'rotate-0' : '-rotate-90'}`}>
+                <ChevronDown className="w-5 h-5 group-hover:text-slate-700" style={{ color: COLORS.headerBlue }} />
+              </div>
+              <h3 className="text-xl font-black uppercase tracking-wider flex items-center gap-3" style={{ color: COLORS.headerBlue }}>
+                <span className="text-2xl">{CATEGORY_EMOJIS[catName] || '✨'}</span>
+                {catName}
+                <span className="text-sm font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">{opts.length}</span>
+              </h3>
+              <div className="flex-1 h-px bg-slate-100" />
+            </button>
+
+            <AnimatePresence>
+              {expandedCategories[catName] && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="overflow-hidden"
+                >
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {opts.map((opt: Option) => {
+                      const isSelected = selectedIds.includes(opt.id);
+                      const priorities = getInsurancePriorities(opt);
+                      const matchesPriority = priority ? priorities.includes(priority) : false;
+                      const isDimmed = !!priority && !matchesPriority;
+                      const whyThisFits = getInsuranceWhy(opt);
+
+                      return (
+                        <div
+                          key={opt.id}
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => onToggle(category, opt.id)}
+                          onKeyDown={(event) => {
+                            if (event.key === 'Enter' || event.key === ' ') {
+                              event.preventDefault();
+                              onToggle(category, opt.id);
+                            }
+                          }}
+                          className={`relative p-6 rounded-3xl border-2 transition-all flex flex-col items-center text-center group bg-white ${
+                            isSelected
+                              ? 'border-[#10B981] bg-emerald-50/10 ring-2 ring-emerald-50'
+                              : matchesPriority
+                              ? 'border-[#3372B2] bg-blue-50/40 shadow-[0_2px_6px_rgba(0,0,0,0.05)]'
+                              : isDimmed
+                              ? 'border-slate-100 opacity-60 hover:opacity-100 hover:border-[#D6E4F0] hover:bg-[#F3F7FB]'
+                              : 'border-slate-100 hover:border-[#D6E4F0] hover:bg-[#F3F7FB] hover:shadow-[0_2px_6px_rgba(0,0,0,0.05)]'
+                          }`}
+                        >
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              setActiveInfoOption(opt);
+                            }}
+                            className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full border border-blue-100 bg-blue-50 text-sm font-black text-[#3372B2] transition-all hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                            aria-label={`Learn more about ${opt.name}`}
+                          >
+                            i
+                          </button>
+                          {matchesPriority && priority && (
+                            <span className="mb-3 rounded-full border border-blue-100 bg-white px-3 py-1 text-[10px] font-black uppercase tracking-widest text-[#3372B2] shadow-sm">
+                              {INSURANCE_PRIORITY_BADGES[priority]}
+                            </span>
+                          )}
+                          <span className="text-4xl mb-3">{opt.emoji}</span>
+                          <p className="font-bold mb-1" style={{ color: COLORS.headerBlue }}>{opt.name}</p>
+                          <p className="text-sm font-medium mb-3" style={{ color: COLORS.valueTeal }}>{opt.description}</p>
+                          <p className="mb-3 rounded-2xl bg-slate-50 px-4 py-3 text-left text-xs font-medium leading-relaxed text-slate-600">
+                            <span className="font-black text-[#3372B2]">Why this fits:</span> {whyThisFits}
+                          </p>
+                          <p className="font-black text-xl" style={{ color: COLORS.headerBlue }}>
+                            ${(opt.monthlyCost * multiplier).toLocaleString()}/mo
+                          </p>
+                          {opt.items && (
+                            <div className="mt-5 w-full rounded-2xl bg-slate-50 p-4 text-left">
+                              <p className="mb-3 text-xs font-black uppercase tracking-widest text-[#3372B2]">Best For:</p>
+                              <ul className="space-y-2">
+                                {opt.items.map((item) => (
+                                  <li key={item} className="flex items-start gap-2 text-sm font-medium leading-snug text-slate-600">
+                                    <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[#2D9B8E]" />
+                                    <span>{item}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                          <div
+                            className="mt-4 w-6 h-6 rounded-full border-2 flex items-center justify-center"
+                            style={{
+                              backgroundColor: isSelected ? COLORS.selectedGreen : 'transparent',
+                              borderColor: isSelected ? COLORS.selectedGreen : COLORS.borderSlate
+                            }}
+                          >
+                            {isSelected && <Check className="w-4 h-4 text-white" />}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        ))}
+      </div>
+
+      <InsuranceInfoModal
         option={activeInfoOption}
         onClose={() => setActiveInfoOption(null)}
       />
@@ -1473,7 +2370,1189 @@ function MultiSelectionStep({ options, category, state, onToggle, multiplier = 1
   );
 }
 
-// Auth, feedback, and history.
+function InsuranceInfoModal({ option, onClose }: { option: Option | null; onClose: () => void }) {
+  const info = option ? getInsuranceInfo(option) : null;
+
+  return (
+    <AnimatePresence>
+      {option && info && (
+        <motion.div
+          className="fixed inset-0 z-[250] flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          onClick={onClose}
+        >
+          <motion.div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="insurance-info-title"
+            className="w-full max-w-xl overflow-hidden rounded-3xl bg-white shadow-2xl"
+            initial={{ opacity: 0, y: 24, scale: 0.96 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 16, scale: 0.96 }}
+            transition={{ duration: 0.2 }}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-4 bg-[#3372B2] px-6 py-5 text-white">
+              <div>
+                <p className="text-xs font-black uppercase tracking-widest text-blue-100">Insurance Info</p>
+                <h2 id="insurance-info-title" className="mt-1 text-2xl font-black">{option.name}</h2>
+              </div>
+              <button
+                onClick={onClose}
+                className="rounded-full bg-white/10 p-2 transition-colors hover:bg-white/20"
+                aria-label="Close insurance info"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4 p-6 sm:p-8">
+              <section className="rounded-2xl border border-blue-100 bg-blue-50/70 p-5">
+                <h3 className="text-lg font-black text-[#3372B2]">What it is</h3>
+                <p className="mt-2 text-sm font-medium leading-relaxed text-slate-600">{info.what}</p>
+              </section>
+              <section className="rounded-2xl border border-emerald-100 bg-emerald-50 p-5">
+                <h3 className="text-lg font-black text-emerald-700">Why you'd want or need it</h3>
+                <p className="mt-2 text-sm font-medium leading-relaxed text-emerald-900/80">{info.why}</p>
+              </section>
+            </div>
+
+            <div className="border-t border-slate-100 bg-slate-50 px-6 py-4">
+              <button
+                onClick={onClose}
+                className="w-full rounded-xl bg-orange-500 px-5 py-3 font-bold text-white shadow-lg shadow-orange-100 transition-all hover:bg-orange-600 active:scale-[0.99]"
+              >
+                Back to Insurance Options
+              </button>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+
+function InsuranceInfoStep({ onNext }: { onNext: () => void }) {
+  const examples = [
+    { title: 'Doctor Visit', without: '$150+', with: '$20-40 copay' },
+    { title: 'Broken Phone or Laptop in a Fire', without: 'Replace it yourself', with: 'Renters policy may help' },
+    { title: 'Car Accident', without: 'Thousands of dollars', with: 'Auto policy helps cover costs' },
+  ];
+
+  return (
+    <div className="space-y-8 rounded-3xl border border-blue-100 bg-blue-50 p-8">
+      <div className="flex items-center gap-4">
+        <div className="w-12 h-12 bg-blue-500 rounded-2xl flex items-center justify-center">
+          <Info className="w-7 h-7 text-white" />
+        </div>
+        <div>
+          <p className="text-xs font-black uppercase tracking-widest text-blue-600">Mini Lesson</p>
+          <h2 className="text-3xl font-black text-slate-900">All About Insurance</h2>
+        </div>
+      </div>
+
+      <section className="rounded-3xl border border-white bg-white/80 p-6 shadow-sm">
+        <h3 className="font-black text-xl text-blue-900">Risk and protection</h3>
+        <p className="mt-2 text-blue-800/80 font-medium leading-relaxed">
+          Insurance is a way to protect yourself from big financial losses. You pay a monthly cost, and the insurance company helps pay when something expensive happens.
+        </p>
+      </section>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <section className="rounded-3xl border border-orange-100 bg-orange-50 p-6">
+          <h3 className="font-black text-xl text-orange-700">Without insurance</h3>
+          <p className="mt-2 text-sm font-medium leading-relaxed text-orange-900/80">
+            You may have to pay the full bill yourself. A surprise accident or medical cost can quickly become hard to afford.
+          </p>
+        </section>
+        <section className="rounded-3xl border border-emerald-100 bg-emerald-50 p-6">
+          <h3 className="font-black text-xl text-emerald-700">With insurance</h3>
+          <p className="mt-2 text-sm font-medium leading-relaxed text-emerald-900/80">
+            You still pay monthly, but you are better protected from very large bills when something goes wrong.
+          </p>
+        </section>
+      </div>
+
+      <section className="space-y-4">
+        <h3 className="font-black text-xl text-blue-900">Real-world cost examples</h3>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          {examples.map((example) => (
+            <div key={example.title} className="rounded-3xl border border-blue-100 bg-white p-5 shadow-sm">
+              <p className="font-black text-[#3372B2]">{example.title}</p>
+              <div className="mt-4 space-y-2 text-sm font-medium">
+                <p className="rounded-xl bg-red-50 px-3 py-2 text-red-700">Without: {example.without}</p>
+                <p className="rounded-xl bg-emerald-50 px-3 py-2 text-emerald-700">With: {example.with}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="rounded-3xl border border-blue-100 bg-white p-6 shadow-sm">
+        <h3 className="font-black text-xl text-blue-900">Think about it</h3>
+        <p className="mt-2 text-sm font-medium leading-relaxed text-slate-600">
+          Insurance is not about hoping something bad happens. It is about being ready if something unexpected happens.
+        </p>
+        <p className="mt-4 rounded-2xl bg-blue-50 px-4 py-3 text-sm font-black text-[#3372B2]">
+          Would you rather pay less each month, or pay more to have stronger protection?
+        </p>
+      </section>
+
+      <button
+        onClick={onNext}
+        className="w-full py-4 bg-blue-600 text-white rounded-2xl font-bold hover:bg-blue-700 transition-all shadow-lg"
+      >
+        I Understand, Let's Choose!
+      </button>
+    </div>
+  );
+}
+
+function StreamingSelectionStep({ options, category, state, onToggle }: any) {
+  const selectedIds = state.selections[category] as string[];
+  
+  const services = useMemo(() => {
+    const groups: Record<string, { ads?: Option, noAds?: Option, standard?: Option }> = {};
+    
+    options.forEach((opt: Option) => {
+      const serviceName = opt.service || 'Other';
+      if (!groups[serviceName]) groups[serviceName] = {};
+      
+      const group = groups[serviceName];
+      if (opt.planType === 'ads') group.ads = opt;
+      else if (opt.planType === 'no-ads') group.noAds = opt;
+      else group.standard = opt;
+    });
+    
+    return groups;
+  }, [options]);
+
+  const renderOption = (opt: Option) => (
+    <button
+      key={opt.id}
+      onClick={() => onToggle(category, opt.id)}
+      className="w-full rounded-2xl text-left transition-all border-2 flex items-center gap-4 p-4 group h-full bg-white"
+      style={{
+        borderColor: selectedIds.includes(opt.id) ? COLORS.selectedGreen : COLORS.borderSlate,
+        boxShadow: selectedIds.includes(opt.id) ? '0 0 0 2px rgba(16, 185, 129, 0.08)' : undefined
+      }}
+    >
+      <div className="w-14 h-14 rounded-xl overflow-hidden shrink-0 border border-slate-100 shadow-inner">
+        <img src={opt.image} alt={opt.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" referrerPolicy="no-referrer" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex justify-between items-start gap-2">
+          <h4 className="font-bold text-sm leading-tight" style={{ color: COLORS.headerBlue }}>
+            {opt.name}
+          </h4>
+          <div
+            className="shrink-0 w-5 h-5 rounded-full border flex items-center justify-center transition-all"
+            style={{
+              backgroundColor: selectedIds.includes(opt.id) ? COLORS.selectedGreen : 'transparent',
+              borderColor: selectedIds.includes(opt.id) ? COLORS.selectedGreen : COLORS.borderSlate
+            }}
+          >
+            {selectedIds.includes(opt.id) && <Check className="w-3.5 h-3.5 text-white" />}
+          </div>
+        </div>
+        <div className="flex items-baseline gap-1 mt-1">
+          <span className="text-lg font-black" style={{ color: COLORS.headerBlue }}>${opt.monthlyCost.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">/mo</span>
+        </div>
+      </div>
+    </button>
+  );
+
+  return (
+    <div className="space-y-12">
+        {/* Desktop Header */}
+        <div className="grid grid-cols-2 gap-12 px-6 hidden md:grid">
+          <div className="flex items-center gap-3">
+            <div className="w-2 h-2 rounded-full bg-slate-300" />
+            <span className="text-xs font-black text-slate-400 tracking-wider">With Ads / Standard</span>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="w-2 h-2 rounded-full bg-orange-300" />
+            <span className="text-xs font-black text-slate-400 tracking-wider">Without Ads / Premium</span>
+          </div>
+        </div>
+
+        <div className="space-y-8">
+          {Object.entries(services).map(([serviceName, group]: [string, any]) => (
+            <div key={serviceName} className="space-y-4">
+              <div className="flex items-center gap-4 px-2">
+                <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest bg-slate-100 px-3 py-1 rounded-lg">{serviceName}</h3>
+                <div className="flex-1 h-px bg-slate-100" />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-12">
+                <div className="space-y-3">
+                  {group.ads ? renderOption(group.ads) : group.standard ? renderOption(group.standard) : (
+                    <div className="h-full min-h-[88px] border-2 border-dashed border-slate-100 rounded-2xl bg-slate-50/50 flex items-center justify-center">
+                      <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">No Ads Only</span>
+                    </div>
+                  )}
+                </div>
+                <div className="space-y-3">
+                  {group.noAds ? renderOption(group.noAds) : (
+                    <div className="hidden md:flex h-full min-h-[88px] border-2 border-dashed border-slate-100 rounded-2xl bg-slate-50/30 items-center justify-center">
+                      <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">Single Option Only</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+    </div>
+  );
+}
+
+function PhoneSelectionStep({ state, onSelect, deviceOptions }: any) {
+  const [decision, setDecision] = useState<'none' | 'keep' | 'refurbished' | 'new'>(() => {
+    const currentId = state.selections.phone;
+    if (currentId === 'keep-phone') return 'keep';
+    if (currentId?.startsWith('refurb-')) return 'refurbished';
+    if (currentId?.startsWith('new-')) return 'new';
+    return 'none';
+  });
+  const refurbishedOptions = deviceOptions.filter((p: any) => p.category === 'refurbished');
+  const newOptions = deviceOptions.filter((p: any) => p.category === 'new');
+
+  useEffect(() => {
+    const currentId = state.selections.phone;
+    if (currentId === 'keep-phone') {
+      setDecision('keep');
+    } else if (currentId?.startsWith('refurb-')) {
+      setDecision('refurbished');
+    } else if (currentId?.startsWith('new-')) {
+      setDecision('new');
+    } else {
+      setDecision('none');
+    }
+  }, [state.selections.phone]);
+
+  const handleDecision = (type: 'keep' | 'refurbished' | 'new') => {
+    setDecision(type);
+    if (type === 'keep') {
+      onSelect('phone', 'keep-phone');
+      return;
+    }
+
+    const selectedId = state.selections.phone;
+    const isSameCategorySelected =
+      (type === 'refurbished' && selectedId?.startsWith('refurb-')) ||
+      (type === 'new' && selectedId?.startsWith('new-'));
+
+    if (!isSameCategorySelected) {
+      onSelect('phone', '');
+    }
+  };
+
+  const renderPhoneCard = (phone: (typeof PHONE_SUB_OPTIONS.refurbished)[number] | (typeof PHONE_SUB_OPTIONS.new)[number]) => {
+    const monthlyCost = phone.price / phone.months;
+    const isSelected = state.selections.phone === phone.id;
+
+    return (
+      <button
+        key={phone.id}
+        onClick={() => onSelect('phone', phone.id)}
+        className={`p-6 rounded-2xl text-left transition-all border-2 flex flex-col justify-between h-full ${
+          isSelected
+            ? 'bg-emerald-50/40'
+            : 'border-slate-100 bg-white hover:border-slate-300'
+        }`}
+        style={isSelected ? { borderColor: COLORS.selectedGreen, boxShadow: '0 0 0 2px rgba(16, 185, 129, 0.08)' } : undefined}
+      >
+        <div className="space-y-2">
+          <div className="flex justify-between items-start">
+            <span className="text-3xl">{phone.emoji}</span>
+            {isSelected && <CheckCircle2 className="w-6 h-6" style={{ color: COLORS.selectedGreen }} />}
+          </div>
+          <h3 className="font-bold text-lg text-slate-900">{phone.name}</h3>
+          <p className="text-sm text-slate-500">{phone.description}</p>
+          <p className="text-xs font-bold text-blue-600 bg-blue-50 inline-block px-2 py-1 rounded">
+            {phone.months}-Month Plan
+          </p>
+        </div>
+        <div className="mt-4 pt-4 border-t border-slate-100">
+          <span className="text-2xl font-black text-slate-900">
+            ${monthlyCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            <span className="text-xs font-bold text-slate-400 uppercase ml-1">/mo</span>
+          </span>
+        </div>
+      </button>
+    );
+  };
+
+  return (
+    <div className="space-y-8">
+      <div className="bg-slate-900 text-white p-8 rounded-3xl space-y-4 shadow-xl">
+        <h2 className="text-2xl font-bold flex items-center gap-3">
+          <Smartphone className="text-orange-500" /> The Year is 2030...
+        </h2>
+        <p className="text-slate-300 text-lg leading-relaxed">
+          Imagine that your current phone is an <strong>iPhone 17 Pro</strong>. It's already paid off (you owe $0),
+          but there are some newer phones on the market that you've been looking at. What do you do?
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <button
+          onClick={() => handleDecision('keep')}
+          className={`p-6 rounded-2xl border-2 transition-all text-left ${
+            decision === 'keep' ? 'bg-emerald-50/40' : 'border-slate-200 bg-white hover:border-slate-300'
+          }`}
+          style={decision === 'keep' ? { borderColor: COLORS.selectedGreen } : undefined}
+        >
+          <h3 className="font-bold text-lg mb-1">Keep current phone</h3>
+          <p className="text-sm text-slate-500">My iPhone 17 Pro works fine. I'll save my money.</p>
+          <p className="mt-4 font-black text-xl">$0/mo</p>
+        </button>
+
+        <button
+          onClick={() => handleDecision('refurbished')}
+          className={`p-6 rounded-2xl border-2 transition-all text-left ${
+            decision === 'refurbished' ? 'bg-emerald-50/40' : 'border-slate-200 bg-white hover:border-slate-300'
+          }`}
+          style={decision === 'refurbished' ? { borderColor: COLORS.selectedGreen } : undefined}
+        >
+          <h3 className="font-bold text-lg mb-1">Buy refurbished</h3>
+          <p className="text-sm text-slate-500">I want a newer model, but I want to save some money.</p>
+        </button>
+
+        <button
+          onClick={() => handleDecision('new')}
+          className={`p-6 rounded-2xl border-2 transition-all text-left ${
+            decision === 'new' ? 'bg-emerald-50/40' : 'border-slate-200 bg-white hover:border-slate-300'
+          }`}
+          style={decision === 'new' ? { borderColor: COLORS.selectedGreen } : undefined}
+        >
+          <h3 className="font-bold text-lg mb-1">Buy a new phone</h3>
+          <p className="text-sm text-slate-500">I want the latest tech (iPhone 21) right now!</p>
+        </button>
+      </div>
+
+      <AnimatePresence mode="wait">
+        {decision === 'refurbished' && (
+          <motion.div
+            key="refurbished"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -12 }}
+            className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4"
+          >
+            {refurbishedOptions.map(renderPhoneCard)}
+          </motion.div>
+        )}
+
+        {decision === 'new' && (
+          <motion.div
+            key="new"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -12 }}
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-4"
+          >
+            {newOptions.map(renderPhoneCard)}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+function PhonePlanSelectionStep({ options, category, state, onSelect }: any) {
+  const selectedId = state.selections[category];
+  const [showLesson, setShowLesson] = useState(false);
+
+  const explanationBlocks = [
+    {
+      title: 'Data',
+      body: 'Data is what lets you watch videos, use apps, search online, and scroll on social media.',
+    },
+    {
+      title: 'Speed',
+      body: 'Some plans offer faster internet speeds, like 5G.',
+    },
+    {
+      title: 'Hotspot',
+      body: 'A hotspot lets your phone share internet with a laptop or tablet.',
+    },
+  ];
+
+  const userTypes = [
+    {
+      title: 'Light User',
+      body: 'Mostly calls, texts, and a little app use.',
+    },
+    {
+      title: 'Regular User',
+      body: 'Uses social media, videos, and apps most days.',
+    },
+    {
+      title: 'Heavy User',
+      body: 'Watches lots of videos, streams often, games, or is online a lot.',
+    },
+  ];
+
+  return (
+    <div className="space-y-8">
+      <BeforeYouChooseCallout
+        body="Take a quick 2-minute look at what phone plans include."
+        icon={<Smartphone className="h-5 w-5" />}
+        actionIcon={<Info className="w-4 h-4" />}
+        onLessonClick={() => setShowLesson(true)}
+      />
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-16">
+        {options.map((opt: any) => {
+          const isSelected = selectedId === opt.id;
+
+          return (
+            <button
+              key={opt.id}
+              onClick={() => onSelect(category, opt.id)}
+              className="relative flex flex-col items-center text-center p-6 transition-all border-2 rounded-3xl group bg-white"
+              style={{
+                borderColor: isSelected ? COLORS.selectedGreen : 'transparent',
+                boxShadow: isSelected ? '0 0 0 2px rgba(16, 185, 129, 0.08)' : undefined
+              }}
+            >
+              {opt.image && (
+                <div className="h-24 w-full flex items-center justify-center mb-4">
+                  <img src={opt.image} alt={opt.name} className="max-h-full max-w-[80%] object-contain" referrerPolicy="no-referrer" />
+                </div>
+              )}
+
+              <div className="font-black text-3xl mb-4" style={{ color: COLORS.headerBlue }}>
+                ${opt.monthlyCost}/Month
+              </div>
+
+              <div className="space-y-1 text-left w-full max-w-[280px] mx-auto text-[13px] leading-snug">
+                <p style={{ color: COLORS.headerBlue }}><span className="font-bold">Plan Name:</span> <span style={{ color: COLORS.valueTeal }}>{opt.planName}</span></p>
+                <p style={{ color: COLORS.headerBlue }}><span className="font-bold">High-Speed Data:</span> <span style={{ color: COLORS.valueTeal }}>{opt.data}</span></p>
+                <p style={{ color: COLORS.headerBlue }}><span className="font-bold">Hotspot:</span> <span style={{ color: COLORS.valueTeal }}>{opt.hotspot}</span></p>
+                <p style={{ color: COLORS.headerBlue }}><span className="font-bold">5G Access:</span> <span style={{ color: COLORS.valueTeal }}>{opt.access}</span></p>
+                <p style={{ color: COLORS.headerBlue }}><span className="font-bold">Notes:</span> <span style={{ color: COLORS.valueTeal }}>{opt.notes}</span></p>
+              </div>
+
+              {isSelected && (
+                <div className="absolute -top-2 -right-2 text-white rounded-full p-1 shadow-md" style={{ backgroundColor: COLORS.selectedGreen }}>
+                  <Check className="w-5 h-5" />
+                </div>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      <AnimatePresence>
+        {showLesson && (
+          <motion.div
+            className="fixed inset-0 z-[250] flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setShowLesson(false)}
+          >
+            <motion.div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="phone-plan-lesson-title"
+              className="max-h-[90vh] w-full max-w-3xl overflow-hidden rounded-3xl bg-white shadow-2xl"
+              initial={{ opacity: 0, y: 24, scale: 0.96 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 16, scale: 0.96 }}
+              transition={{ duration: 0.2 }}
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className="flex items-start justify-between gap-4 bg-[#3372B2] px-6 py-5 text-white">
+                <div>
+                  <p className="text-xs font-black uppercase tracking-widest text-blue-100">Phone Plan Mini Lesson</p>
+                  <h2 id="phone-plan-lesson-title" className="mt-1 text-2xl font-black">Quick Lesson: How Phone Plans Work</h2>
+                </div>
+                <button
+                  onClick={() => setShowLesson(false)}
+                  className="rounded-full bg-white/10 p-2 transition-colors hover:bg-white/20"
+                  aria-label="Close quick lesson"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              <div className="max-h-[65vh] overflow-y-auto p-6 sm:p-8">
+                <div className="space-y-6">
+                  <section className="rounded-2xl border border-slate-100 bg-slate-50 p-5">
+                    <h3 className="text-lg font-black text-[#3372B2]">What is a phone plan?</h3>
+                    <p className="mt-2 text-sm font-medium leading-relaxed text-slate-600">
+                      A phone plan is what you pay for each month so your phone can call, text, and use the internet.
+                    </p>
+                  </section>
+
+                  <section className="space-y-3">
+                    <h3 className="text-lg font-black text-[#3372B2]">What are you paying for?</h3>
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                      {explanationBlocks.map((item) => (
+                        <div key={item.title} className="rounded-2xl border border-blue-100 bg-blue-50/70 p-4">
+                          <p className="font-black text-[#3372B2]">{item.title}</p>
+                          <p className="mt-2 text-sm font-medium leading-relaxed text-slate-600">{item.body}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+
+                  <section className="rounded-2xl border border-orange-100 bg-orange-50 p-5">
+                    <h3 className="text-lg font-black text-orange-600">What does "unlimited" mean?</h3>
+                    <p className="mt-2 text-sm font-medium leading-relaxed text-orange-900/80">
+                      Unlimited does not always mean unlimited fast data. Some phone plans may slow down after you use a certain amount.
+                    </p>
+                  </section>
+
+                  <section className="space-y-3">
+                    <h3 className="text-lg font-black text-[#3372B2]">Which type of user are you?</h3>
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                      {userTypes.map((item) => (
+                        <div key={item.title} className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
+                          <p className="font-black text-slate-900">{item.title}</p>
+                          <p className="mt-2 text-sm font-medium leading-relaxed text-slate-600">{item.body}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+
+                  <section className="rounded-2xl border border-emerald-100 bg-emerald-50 p-5">
+                    <h3 className="text-lg font-black text-emerald-700">Think about it</h3>
+                    <p className="mt-2 text-sm font-medium leading-relaxed text-emerald-900/80">
+                      The best plan is not always the cheapest one. A good plan matches how much you really use your phone.
+                    </p>
+                    <p className="mt-4 rounded-xl bg-white px-4 py-3 text-sm font-black text-slate-800 shadow-sm">
+                      Would you rather save money each month, or pay more for more data and speed?
+                    </p>
+                  </section>
+                </div>
+              </div>
+
+              <div className="border-t border-slate-100 bg-slate-50 px-6 py-4">
+                <button
+                  onClick={() => setShowLesson(false)}
+                  className="w-full rounded-xl bg-orange-500 px-5 py-3 font-bold text-white shadow-lg shadow-orange-100 transition-all hover:bg-orange-600 active:scale-[0.99]"
+                >
+                  Back to Plans
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+function QuizWrapper({ title, children, description }: { title: string, children: React.ReactNode, description?: string }) {
+  return (
+    <div className="max-w-6xl mx-auto mb-12 px-4 md:px-0">
+      {description && (
+        <div className="mb-6 text-center">
+          <p className="text-slate-500 text-lg font-medium">{description}</p>
+        </div>
+      )}
+
+      <div className="border-2 rounded-xl bg-white shadow-xl relative" style={{ borderColor: COLORS.borderSlate }}>
+        <div className="text-white py-4 px-6 text-center font-bold text-xl uppercase tracking-tight rounded-t-[10px]" style={{ backgroundColor: COLORS.headerBlue }}>
+          {title}
+        </div>
+        <div className="p-8">
+          {children}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function FoodSelectionStep({ options, category, state, onSelect, multiplier = 1 }: any) {
+  const selectedId = state.selections[category];
+  const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
+
+  const STORE_LOGOS = {
+    walmart: 'https://tclrzjhxongpnlyxdpcz.supabase.co/storage/v1/object/public/Grocery%20Stores/1.png',
+    target: 'https://tclrzjhxongpnlyxdpcz.supabase.co/storage/v1/object/public/Grocery%20Stores/2.png',
+    kroger: 'https://tclrzjhxongpnlyxdpcz.supabase.co/storage/v1/object/public/Grocery%20Stores/3.png',
+  };
+
+  const renderSection = (type: 'essential' | 'premium', title: string, logos: string[]) => (
+    <div className="relative border-b border-slate-100 last:border-0 py-10 first:pt-4 pl-12 md:pl-16">
+      <div className="absolute left-0 top-0 bottom-0 w-12 md:w-16 flex items-center justify-center">
+        <div className="-rotate-90 whitespace-nowrap">
+          <span className={`font-black text-[15px] md:text-lg uppercase tracking-[0.3em] ${
+            type === 'essential' ? 'text-orange-500' : 'text-[#2D9B8E]'
+          }`}>
+            {title}
+          </span>
+        </div>
+      </div>
+
+      <div className="flex-1">
+        <div className="flex flex-wrap justify-center gap-4 md:gap-8 mb-10 grayscale opacity-60">
+          {logos.map((url, i) => (
+            <img key={i} src={url} className="h-12 md:h-16 object-contain" alt="Store logo" referrerPolicy="no-referrer" />
+          ))}
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          {options.filter((o: any) => o.type === type).map((opt: any) => {
+            const isSelected = selectedId === opt.id;
+            const comparison = FOOD_STORE_COMPARISONS[opt.id];
+            return (
+              <div key={opt.id} className="relative">
+                <button
+                  onClick={() => onSelect(category, opt.id)}
+                  className={`w-full flex flex-col items-center text-center p-6 transition-all border-2 rounded-3xl relative group ${
+                    isSelected
+                      ? 'border-[#10B981] ring-2 ring-emerald-50 bg-emerald-50/10'
+                      : 'border-slate-100 hover:border-slate-200 bg-white shadow-sm'
+                  }`}
+                >
+                  {opt.recommended && (
+                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#2B5FA3] text-white text-[11px] font-bold px-3 py-1 rounded-full whitespace-nowrap">
+                      Most realistic for students
+                    </div>
+                  )}
+
+                  <div className="text-[#3372B2] font-black text-2xl mb-1 mt-2">
+                    ~${((opt.weeklyPrice ?? 0) * multiplier).toLocaleString()}/Week
+                  </div>
+                  <div className="text-[#3372B2] font-bold text-lg mb-4 leading-tight">{opt.name}</div>
+
+                  <p className="text-slate-500 text-sm mb-6 min-h-[40px]">{opt.description}</p>
+
+                  <div
+                    onClick={(e) => { e.stopPropagation(); setActiveTooltip(opt.id); }}
+                    className="p-2 text-[#3372B2] hover:text-[#2D9B8E] transition-colors flex items-center gap-2 text-sm font-bold cursor-pointer"
+                  >
+                    <Info className="w-5 h-5" />
+                    What's included?
+                  </div>
+
+                  {isSelected && (
+                    <div className="absolute -top-3 -right-3 w-8 h-8 bg-[#10B981] border-4 border-white text-white rounded-full flex items-center justify-center shadow-md">
+                      <Check className="w-4 h-4 stroke-[4px]" />
+                    </div>
+                  )}
+                </button>
+
+                <AnimatePresence>
+                  {activeTooltip === opt.id && (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.9, y: 10 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.9, y: 10 }}
+                      className="absolute z-[110] top-full mt-2 left-0 right-0 p-6 bg-white border-2 border-[#3372B2] rounded-2xl shadow-2xl"
+                    >
+                      <button onClick={() => setActiveTooltip(null)} className="absolute top-2 right-2 text-slate-400 p-2">✕</button>
+                      <p className="text-[#3372B2] font-bold mb-3 text-sm pr-6">
+                        This package includes things such as:
+                      </p>
+                      <ul className="grid grid-cols-1 gap-1">
+                        {opt.items?.map((item: string, i: number) => (
+                          <li key={i} className="text-[#3372B2] text-xs flex items-center gap-2">
+                            <div className="w-1.5 h-1.5 bg-[#2D9B8E] rounded-full shrink-0" />
+                            {item}
+                          </li>
+                        ))}
+                      </ul>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="space-y-4">
+      {renderSection('essential', 'Budget Stores', [
+        'https://tclrzjhxongpnlyxdpcz.supabase.co/storage/v1/object/public/Grocery%20Stores/1.png',
+        'https://tclrzjhxongpnlyxdpcz.supabase.co/storage/v1/object/public/Grocery%20Stores/2.png',
+        'https://tclrzjhxongpnlyxdpcz.supabase.co/storage/v1/object/public/Grocery%20Stores/3.png',
+        'https://tclrzjhxongpnlyxdpcz.supabase.co/storage/v1/object/public/Grocery%20Stores/4.png',
+      ])}
+
+      <div className="h-px bg-slate-100 my-4" />
+
+      {renderSection('premium', 'All Stores', [
+        'https://tclrzjhxongpnlyxdpcz.supabase.co/storage/v1/object/public/Grocery%20Stores/1.png',
+        'https://tclrzjhxongpnlyxdpcz.supabase.co/storage/v1/object/public/Grocery%20Stores/2.png',
+        'https://tclrzjhxongpnlyxdpcz.supabase.co/storage/v1/object/public/Grocery%20Stores/3.png',
+        'https://tclrzjhxongpnlyxdpcz.supabase.co/storage/v1/object/public/Grocery%20Stores/4.png',
+        'https://tclrzjhxongpnlyxdpcz.supabase.co/storage/v1/object/public/Grocery%20Stores/5.png',
+        'https://tclrzjhxongpnlyxdpcz.supabase.co/storage/v1/object/public/Grocery%20Stores/6.png',
+        'https://tclrzjhxongpnlyxdpcz.supabase.co/storage/v1/object/public/Grocery%20Stores/7.png',
+      ])}
+
+      <div className="mx-2 mt-2 p-4 bg-amber-50 border border-amber-200 rounded-2xl flex items-start gap-3">
+        <span className="text-amber-500 text-lg mt-0.5">⚠</span>
+        <p className="text-amber-800 text-sm font-medium leading-relaxed">
+          <span className="font-bold">Need allergen-free options?</span> Items like lactose-free milk can cost $10-20 more per week in any tier.
+        </p>
+      </div>
+
+      {activeTooltip && (
+        <div className="fixed inset-0 z-[105]" onClick={() => setActiveTooltip(null)} />
+      )}
+    </div>
+  );
+}
+
+function TransportationGridStep({ state, onSelect, options }: any) {
+  const selectedIds = state.selections.transportation as string[];
+  const [showTooltip, setShowTooltip] = useState(false);
+  const normalizeCategory = (opt: any) => {
+    if (opt.category === 'new' || opt.category === 'used' || opt.category === 'new_ev' || opt.category === 'used_ev') {
+      return opt.category;
+    }
+    if (opt.id?.includes('ev-new')) return 'new_ev';
+    if (opt.id?.includes('ev-used')) return 'used_ev';
+    if (opt.id?.includes('new_ev')) return 'new_ev';
+    if (opt.id?.includes('used_ev')) return 'used_ev';
+    if (opt.id?.endsWith('-new')) return 'new';
+    if (opt.id?.endsWith('-used')) return 'used';
+    return '';
+  };
+  const newCars = options.filter((o: any) => normalizeCategory(o) === 'new');
+  const usedCars = options.filter((o: any) => normalizeCategory(o) === 'used');
+  const newEVs = options.filter((o: any) => normalizeCategory(o) === 'new_ev');
+  const usedEVs = options.filter((o: any) => normalizeCategory(o) === 'used_ev');
+  const findOption = (rowId: string, list: any[], type: string) => {
+    const idsByType: Record<string, string[]> = {
+      new: [`${rowId}`, `${rowId}-new`],
+      used: [`${rowId}-used`],
+      'new-ev': [`${rowId}-ev-new`, `${rowId}-new-ev`, `${rowId}-new_ev`],
+      'used-ev': [`${rowId}-ev-used`, `${rowId}-used-ev`, `${rowId}-used_ev`],
+    };
+
+    return list.find((opt: any) => idsByType[type]?.includes(opt.id));
+  };
+
+  const calculateMonthly = (price: number, annualRate: number) => {
+    if (price === 0) return 0;
+    const r = annualRate / 100 / 12;
+    const n = 60;
+    return (price * r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1);
+  };
+
+  const renderCell = (rowId: string, type: string, price: number, label?: string) => {
+    const cellId = `${rowId}-${type}`;
+    const isSelected = selectedIds.includes(cellId);
+    const rate = INTEREST_RATES[type as keyof typeof INTEREST_RATES] || 0;
+    const monthly = calculateMonthly(price, rate);
+
+    return (
+      <button
+        key={cellId}
+        onClick={() => onSelect('transportation', [cellId])}
+        className={`flex-1 p-3 transition-all duration-200 ease-out rounded-xl text-center group min-h-[80px] flex flex-col justify-center ${
+          isSelected
+            ? 'border-2 border-[#10B981] bg-white shadow-lg z-10 scale-105'
+            : 'border border-transparent hover:bg-[#F3F7FB] hover:border-[#D6E4F0] hover:shadow-[0_2px_6px_rgba(0,0,0,0.05)]'
+        }`}
+      >
+        {price === 0 ? (
+          <span className="text-[#3372B2] text-sm font-bold leading-snug block px-2">{label}</span>
+        ) : (
+          <div className="space-y-1">
+            <span className="text-[#3372B2] font-black text-lg block">
+              ${price.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+            </span>
+            <div className="text-[14px] text-[#2D9B8E] font-bold leading-tight">
+              {rate}% Int. • ${monthly.toLocaleString(undefined, { maximumFractionDigits: 0 })}/mo
+            </div>
+          </div>
+        )}
+      </button>
+    );
+  };
+
+  return (
+    <div className="space-y-8 relative">
+      <div className="grid grid-cols-5 gap-4 px-6 items-center mb-4">
+        <div className="text-[#3372B2] font-black text-lg uppercase tracking-tight">Total Price:</div>
+        <div className="text-[#3372B2] font-black text-lg text-center uppercase tracking-tight">New</div>
+        <div className="text-[#3372B2] font-black text-lg text-center uppercase tracking-tight">Used</div>
+        <div className="text-[#3372B2] font-black text-lg text-center uppercase tracking-tight">New EV</div>
+        <div className="text-[#3372B2] font-black text-lg text-center uppercase tracking-tight">Used EV</div>
+      </div>
+
+      <div className="space-y-2">
+        {TRANSPORT_GRID_DATA.map((row, index) => (
+          <div
+            key={row.id}
+            className={`grid grid-cols-5 gap-4 px-6 py-4 items-center rounded-3xl transition-all duration-200 ease-out border-2 border-transparent hover:bg-[#F3F7FB] hover:border-[#D6E4F0] hover:shadow-[0_2px_6px_rgba(0,0,0,0.05)] ${
+              index % 2 !== 0 ? 'bg-[#D9EFE9]' : 'bg-white'
+            }`}
+          >
+            <div className="flex flex-col items-center gap-1">
+              <span className="text-4xl md:text-5xl">{row.emoji}</span>
+              <span className="text-[#3372B2] font-black text-sm uppercase tracking-wide">{row.name}</span>
+            </div>
+
+            {[
+              { type: 'new', opt: findOption(row.id, newCars, 'new') },
+              { type: 'used', opt: findOption(row.id, usedCars, 'used') },
+              { type: 'new-ev', opt: findOption(row.id, newEVs, 'new-ev') },
+              { type: 'used-ev', opt: findOption(row.id, usedEVs, 'used-ev') },
+            ].map(({ type, opt }) => {
+              const legacyOpt = row.options.find(o => o.type === type);
+              const price = typeof opt?.price === 'number' ? Number(opt.price) : legacyOpt?.price;
+              const label = (opt as any)?.label || (legacyOpt as any)?.label;
+
+              return typeof price === 'number'
+                ? renderCell(row.id, type, price, label)
+                : <div key={type} />;
+            })}
+          </div>
+        ))}
+      </div>
+
+      <div className="flex justify-center pt-6">
+        <button
+          onMouseEnter={() => setShowTooltip(true)}
+          onMouseLeave={() => setShowTooltip(false)}
+          className="flex items-center gap-3 text-[#3372B2] font-black text-base hover:underline group"
+        >
+          <div className="p-2 bg-blue-50 rounded-full group-hover:bg-blue-100 transition-colors">
+            <Info className="w-6 h-6" />
+          </div>
+          Wait, what is "Interest" and "Refinancing"?
+        </button>
+      </div>
+
+      <AnimatePresence>
+        {showTooltip && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            className="absolute bottom-20 left-1/2 -translate-x-1/2 w-[450px] p-8 bg-[#3372B2] text-white rounded-3xl shadow-2xl z-50 text-sm leading-relaxed"
+          >
+            <p className="font-black mb-4 text-lg uppercase border-b border-white/20 pb-2">Interest & Refinancing</p>
+            <p className="mb-4">
+              <span className="font-black text-orange-300">Interest</span> is the extra money you pay to a bank for letting you borrow money to buy a car. The rate depends on your "Credit Score"—the higher your score, the lower your interest!
+            </p>
+            <p>
+              <span className="font-black text-orange-300">Refinancing</span> means that later on, if interest rates go down or your credit gets better, you can get a NEW loan to pay off the OLD one. This can lower your monthly payment and save you money!
+            </p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+function FuelPlanSelectionStep({ state, onSelect, fuelPlanType, options, fuelPriceEnvironment }: any) {
+  const [showLesson, setShowLesson] = useState(false);
+  const selectedId = state.selections.fuel;
+  const selectedEnvironment = getFuelPriceEnvironment(fuelPriceEnvironment);
+  const selectedEnvironmentNote = FUEL_PRICE_ENVIRONMENTS.find(option => option.id === selectedEnvironment)?.note;
+  const title = fuelPlanType === 'ev' ? 'Choose Your EV Charging Plan' : 'Choose Your Fuel Plan';
+  const intro = fuelPlanType === 'ev'
+    ? 'EV charging is usually cheaper than gas, but it still belongs in your monthly budget.'
+    : 'Gas costs change based on how far and how often you drive.';
+
+  const handleSelect = (id: string) => {
+    onSelect('fuel', id);
+  };
+
+  const handleEnvironmentSelect = (environment: FuelPriceEnvironment) => {
+    onSelect('fuelPriceEnvironment', environment);
+  };
+
+  if (fuelPlanType === 'none') {
+    return (
+      <div className="space-y-8">
+        <BeforeYouChooseCallout
+          body="Fuel costs depend on the kind of transportation you choose and how often you travel."
+          icon={<Car className="h-5 w-5" />}
+          actionIcon={<Info className="w-4 h-4" />}
+          onLessonClick={() => setShowLesson(true)}
+        />
+        <div className="rounded-3xl border border-emerald-100 bg-emerald-50 p-8 text-center">
+          <p className="text-4xl mb-3">✨</p>
+          <h3 className="text-2xl font-black text-emerald-700">No Fuel Plan Needed</h3>
+          <p className="mt-2 text-sm font-medium leading-relaxed text-emerald-900/80">
+            Your current transportation choice does not need a monthly gas or EV charging plan.
+          </p>
+        </div>
+        <FuelLessonModal isOpen={showLesson} onClose={() => setShowLesson(false)} />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-8">
+      <BeforeYouChooseCallout
+        body={intro}
+        icon={<Car className="h-5 w-5" />}
+        actionIcon={<Info className="w-4 h-4" />}
+        onLessonClick={() => setShowLesson(true)}
+      />
+
+      <div className="space-y-2 text-center">
+        <h3 className="text-2xl font-black" style={{ color: COLORS.headerBlue }}>{title}</h3>
+        <p className="text-sm font-medium text-slate-500">Pick the monthly estimate that best matches your driving habits.</p>
+      </div>
+
+      {fuelPlanType === 'gas' && (
+        <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="space-y-1">
+              <p className="text-sm font-black uppercase tracking-widest" style={{ color: COLORS.headerBlue }}>
+                Fuel Price Environment
+              </p>
+              <p className="text-sm font-medium leading-relaxed text-slate-500">
+                Fuel prices can change over time. This shows how your monthly cost can go up or down.
+              </p>
+            </div>
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 lg:min-w-[420px]">
+              {FUEL_PRICE_ENVIRONMENTS.map((environment) => {
+                const isSelected = selectedEnvironment === environment.id;
+
+                return (
+                  <button
+                    key={environment.id}
+                    onClick={() => handleEnvironmentSelect(environment.id)}
+                    className={`rounded-xl border px-4 py-3 text-sm font-black transition-all ${
+                      isSelected
+                        ? 'border-[#10B981] bg-emerald-50 text-emerald-700 shadow-sm'
+                        : 'border-slate-200 bg-slate-50 text-slate-600 hover:border-[#D6E4F0] hover:bg-[#F3F7FB]'
+                    }`}
+                  >
+                    {environment.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          {selectedEnvironmentNote && (
+            <p className="mt-4 rounded-2xl bg-blue-50 px-4 py-3 text-sm font-bold text-[#3372B2]">
+              {selectedEnvironmentNote}
+            </p>
+          )}
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {options.map((opt: Option) => {
+          const isSelected = selectedId === opt.id;
+          const usageLabel = opt.category || '';
+          const monthlyCost = getFuelMonthlyCost(opt, selectedEnvironment);
+
+          return (
+            <button
+              key={opt.id}
+              onClick={() => handleSelect(opt.id)}
+              className={`relative flex flex-col items-center text-center p-6 transition-all border-2 rounded-3xl group bg-white ${
+                isSelected
+                  ? 'border-[#10B981] ring-2 ring-emerald-50 bg-emerald-50/10'
+                  : 'border-slate-100 hover:border-[#D6E4F0] hover:bg-[#F3F7FB] hover:shadow-[0_2px_6px_rgba(0,0,0,0.05)]'
+              }`}
+            >
+              <div className="text-4xl mb-3">{opt.emoji}</div>
+              <div className={`mb-3 inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-black ${USAGE_BADGE_STYLES[usageLabel] || 'bg-slate-50 text-slate-600 border-slate-200'}`}>
+                <span>{USAGE_BADGE_ICONS[usageLabel]}</span>
+                {usageLabel}
+              </div>
+              <p className="text-[#3372B2] font-bold text-lg">{opt.name}</p>
+              <p className="text-[#3372B2] font-black text-3xl mt-2">${monthlyCost}/mo</p>
+              <p className="text-[#2D9B8E] text-sm font-medium mt-2">{opt.description}</p>
+
+              <div className="mt-5 w-full rounded-2xl bg-slate-50 p-4 text-left">
+                <p className="mb-3 text-xs font-black uppercase tracking-widest text-[#3372B2]">Best For:</p>
+                <ul className="space-y-2">
+                  {opt.items?.map((item) => (
+                    <li key={item} className="flex items-start gap-2 text-sm font-medium leading-snug text-slate-600">
+                      <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[#2D9B8E]" />
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              {isSelected && (
+                <div className="absolute -top-3 -right-3 w-8 h-8 bg-[#10B981] border-4 border-white text-white rounded-full flex items-center justify-center shadow-md">
+                  <Check className="w-4 h-4 stroke-[4px]" />
+                </div>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      <FuelLessonModal isOpen={showLesson} onClose={() => setShowLesson(false)} />
+    </div>
+  );
+}
+
+function FuelLessonModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          className="fixed inset-0 z-[250] flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          onClick={onClose}
+        >
+          <motion.div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="fuel-lesson-title"
+            className="max-h-[90vh] w-full max-w-3xl overflow-hidden rounded-3xl bg-white shadow-2xl"
+            initial={{ opacity: 0, y: 24, scale: 0.96 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 16, scale: 0.96 }}
+            transition={{ duration: 0.2 }}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-4 bg-[#3372B2] px-6 py-5 text-white">
+              <div>
+                <p className="text-xs font-black uppercase tracking-widest text-blue-100">Fuel Mini Lesson</p>
+                <h2 id="fuel-lesson-title" className="mt-1 text-2xl font-black">How Fuel Costs Work</h2>
+              </div>
+              <button
+                onClick={onClose}
+                className="rounded-full bg-white/10 p-2 transition-colors hover:bg-white/20"
+                aria-label="Close quick lesson"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="max-h-[65vh] overflow-y-auto p-6 sm:p-8">
+              <div className="space-y-6">
+                <section className="rounded-2xl border border-slate-100 bg-slate-50 p-5">
+                  <h3 className="text-lg font-black text-[#3372B2]">Why fuel matters</h3>
+                  <p className="mt-2 text-sm font-medium leading-relaxed text-slate-600">
+                    Fuel is a monthly cost that comes with many transportation choices. The more you drive, the more you usually spend.
+                  </p>
+                </section>
+
+                <section className="rounded-2xl border border-blue-100 bg-blue-50/70 p-5">
+                  <h3 className="text-lg font-black text-[#3372B2]">Why prices change</h3>
+                  <p className="mt-2 text-sm font-medium leading-relaxed text-slate-600">
+                    Fuel prices can go up or down depending on supply, demand, and world events. This can change how much people spend each month.
+                  </p>
+                </section>
+
+                <section className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <div className="rounded-2xl border border-orange-100 bg-orange-50 p-5">
+                    <h3 className="text-lg font-black text-orange-600">Gas vehicles</h3>
+                    <p className="mt-2 text-sm font-medium leading-relaxed text-orange-900/80">
+                      Gas costs depend on distance, gas prices, and how fuel-efficient your vehicle is.
+                    </p>
+                  </div>
+                  <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-5">
+                    <h3 className="text-lg font-black text-emerald-700">Electric vehicles</h3>
+                    <p className="mt-2 text-sm font-medium leading-relaxed text-emerald-900/80">
+                      EV charging can cost less than gas, but charging at home or in public still adds to your monthly budget.
+                    </p>
+                  </div>
+                </section>
+
+                <section className="rounded-2xl border border-blue-100 bg-blue-50/70 p-5">
+                  <h3 className="text-lg font-black text-[#3372B2]">Think about it</h3>
+                  <p className="mt-2 text-sm font-medium leading-relaxed text-slate-600">
+                    A local driver may spend much less than someone with a long commute or lots of weekend trips.
+                  </p>
+                  <p className="mt-4 rounded-xl bg-white px-4 py-3 text-sm font-black text-slate-800 shadow-sm">
+                    How often do you think you would drive in a normal week?
+                  </p>
+                </section>
+              </div>
+            </div>
+
+            <div className="border-t border-slate-100 bg-slate-50 px-6 py-4">
+              <button
+                onClick={onClose}
+                className="w-full rounded-xl bg-orange-500 px-5 py-3 font-bold text-white shadow-lg shadow-orange-100 transition-all hover:bg-orange-600 active:scale-[0.99]"
+              >
+                Back to Fuel Plans
+              </button>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+
+function Nav({
+  session,
+  stepLabel,
+  currentQuestionStep,
+  totalQuestionSteps,
+  progressPercent,
+  showProgress,
+  onReset,
+  onToggleHistory
+}: any) {
+  return (
+    <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-100 px-6 py-4">
+      <div className="max-w-5xl mx-auto flex justify-between items-center gap-4">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-orange-500 rounded-xl flex items-center justify-center shadow-lg shadow-orange-100">
+            <Calculator className="w-6 h-6 text-white" />
+          </div>
+          <div className="hidden sm:flex flex-col">
+            <span className="font-black text-xl tracking-tight">Lifestyle Calculator</span>
+            <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">{session.user.email}</span>
+          </div>
+        </div>
+
+        {showProgress && (
+          <div className="hidden md:flex items-center gap-4">
+            <div className="flex flex-col items-end">
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Step {currentQuestionStep} of {totalQuestionSteps}</span>
+              <span className="font-bold text-slate-700">{stepLabel}</span>
+            </div>
+            <div className="w-32 h-2 bg-slate-100 rounded-full overflow-hidden">
+              <motion.div className="h-full bg-orange-500" animate={{ width: `${progressPercent}%` }} />
+            </div>
+          </div>
+        )}
+
+        <div className="flex items-center gap-2">
+          <button
+            onClick={onToggleHistory}
+            className="flex items-center gap-2 px-4 py-2 hover:bg-slate-100 rounded-xl transition-all text-slate-500 hover:text-orange-600 font-bold text-sm"
+          >
+            <History className="w-4 h-4" />
+            <span className="hidden sm:inline">History</span>
+          </button>
+          <button
+            onClick={onReset}
+            className="flex items-center gap-2 px-4 py-2 hover:bg-slate-100 rounded-xl transition-all text-slate-500 hover:text-orange-600 font-bold text-sm"
+          >
+            <RotateCcw className="w-4 h-4" />
+            <span className="hidden sm:inline">Reset Quiz</span>
+          </button>
+          <button
+            onClick={() => supabase.auth.signOut()}
+            className="px-4 py-2 bg-slate-900 text-white rounded-xl font-bold text-sm hover:bg-slate-800 transition-all"
+          >
+            Sign Out
+          </button>
+        </div>
+      </div>
+    </nav>
+  );
+}
+
 function PilotAuthGate() {
   const [view, setView] = useState<'sign_in' | 'sign_up' | 'forgot_password'>('sign_in');
   const [email, setEmail] = useState('');
@@ -1668,6 +3747,8 @@ function FeedbackTool({ stepName, userId }: { stepName: string, userId: string }
 
     if (screenshot) {
       try {
+        console.log('Starting upload...');
+
         const response = await fetch(screenshot);
         const blob = await response.blob();
         const fileName = `${userId}/${Date.now()}.png`;
@@ -1690,6 +3771,7 @@ function FeedbackTool({ stepName, userId }: { stepName: string, userId: string }
           .getPublicUrl(fileName);
 
         final_screenshot_url = urlData.publicUrl;
+        console.log('Upload Success! URL:', final_screenshot_url);
       } catch (err) {
         console.error('System Error:', err);
         alert('Something went wrong preparing the image.');
@@ -1950,53 +4032,27 @@ function HistoryPage({ userId }: { userId: string }) {
   );
 }
 
-// Results.
-function ResultsStep({ state, monthlyTotal, annualTotal, recommendedSalary, onReset, userId, regionOptions, internetOptions, utilityOptions, streamingOptions, subscriptionOptions, insuranceOptions, phoneOptions, phonePlanOptions, transportOptions, riasecSummary, isCalculatorDataLoading }: any) {
+function ResultsStep({ state, monthlyTotal, annualTotal, recommendedSalary, onReset, userId, regionOptions, internetOptions, utilityOptions, streamingOptions, subscriptionOptions, clothingOptions, insuranceOptions, phoneOptions, phonePlanOptions, transportOptions }: any) {
   const currentRegion = regionOptions.find((r: any) => r.id === state.regionId) || regionOptions[0] || REGIONS[5];
-  const finalizedRecommendedSalary = Math.round(recommendedSalary);
-  const displayedRecommendedSalary = formatWholeDollar(finalizedRecommendedSalary);
-  const matcherRiasecCode = riasecSummary?.topThree || null;
   const [isSaving, setIsSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [careers, setCareers] = useState<CareerSuggestion[]>([]);
   const [isLoadingCareers, setIsLoadingCareers] = useState(true);
-  const [openCareerKey, setOpenCareerKey] = useState<string | null>(null);
-  const [expandedBreakdownCategories, setExpandedBreakdownCategories] = useState<string[]>([]);
-  const latestCareerFetchKey = useRef('');
-  const careerFetchKey = useMemo(
-    () => getCareerSuggestionKey(finalizedRecommendedSalary, currentRegion.name, matcherRiasecCode),
-    [finalizedRecommendedSalary, currentRegion.name, matcherRiasecCode]
-  );
 
   useEffect(() => {
-    if (isCalculatorDataLoading) return;
-
-    let isActive = true;
-    latestCareerFetchKey.current = careerFetchKey;
-    setOpenCareerKey(null);
-    setIsLoadingCareers(true);
-
-    const fetchCareers = async (fetchKey: string) => {
+    const fetchCareers = async () => {
+      setIsLoadingCareers(true);
       try {
-        const suggestions = await getStableCareerSuggestions(fetchKey, finalizedRecommendedSalary, currentRegion.name);
-        if (!isActive || latestCareerFetchKey.current !== fetchKey) return;
+        const suggestions = await getCareerSuggestions(recommendedSalary, currentRegion.name);
         setCareers(suggestions);
       } catch (err) {
-        if (!isActive || latestCareerFetchKey.current !== fetchKey) return;
         console.error('Failed to fetch careers:', err);
-        setCareers([]);
       } finally {
-        if (!isActive || latestCareerFetchKey.current !== fetchKey) return;
         setIsLoadingCareers(false);
       }
     };
-
-    fetchCareers(careerFetchKey);
-
-    return () => {
-      isActive = false;
-    };
-  }, [careerFetchKey, finalizedRecommendedSalary, currentRegion.name, isCalculatorDataLoading]);
+    fetchCareers();
+  }, [recommendedSalary, currentRegion.name]);
 
   const handleSaveResult = async () => {
     setIsSaving(true);
@@ -2043,16 +4099,7 @@ function ResultsStep({ state, monthlyTotal, annualTotal, recommendedSalary, onRe
     state.selections.streaming.forEach((id: string) => add(streamingOptions.find((o: any) => o.id === id), 'Streaming'));
     state.selections.subscriptions.forEach((id: string) => add(subscriptionOptions.find((o: any) => o.id === id), 'Subscriptions'));
     
-    const groceryItemCount = getTotalGroceryItemCount(state.selections.foodCart);
-    const groceryMonthlyCost = getTotalMonthlyGroceryCost(state.selections.foodCart) * m;
-    if (groceryItemCount > 0 && groceryMonthlyCost > 0) {
-      items.push({
-        name: `Grocery Cart (${groceryItemCount})`,
-        cost: groceryMonthlyCost,
-        category: 'Food',
-        emoji: '🛒',
-      });
-    }
+    add(FOOD_OPTIONS.find(o => o.id === state.selections.food), 'Food', m);
     state.selections.transportation.forEach((id: string) => {
       const opt = transportOptions.find((o: any) => o.id === id) || getTransportationOption(id);
       if (opt) {
@@ -2073,32 +4120,13 @@ function ResultsStep({ state, monthlyTotal, annualTotal, recommendedSalary, onRe
         emoji: fuel.emoji,
       });
     }
-    const clothingItemCount = getTotalSelectedItemCount(state.selections.clothingCloset);
-    const clothingMonthlyCost = getTotalMonthlyClothingCost(state.selections.clothingCloset);
-    if (clothingItemCount > 0 && clothingMonthlyCost > 0) {
-      items.push({
-        name: `Closet Items (${clothingItemCount})`,
-        cost: clothingMonthlyCost,
-        category: 'Clothing',
-        emoji: '👕',
-      });
-    }
+    add(clothingOptions.find((o: any) => o.id === state.selections.clothing), 'Clothing');
     
     state.selections.insurance.forEach((id: string) => add(insuranceOptions.find((o: any) => o.id === id), 'Insurance', m));
-    Object.values(state.selections.other).forEach((entry: any) => {
-      const opt = OTHER_OPTIONS.find(o => o.id === entry.id);
-      if (opt) {
-        items.push({
-          name: entry.quantity > 1 ? `${opt.name} x${entry.quantity}` : opt.name,
-          cost: opt.monthlyCost * entry.quantity,
-          category: 'Other',
-          emoji: opt.emoji,
-        });
-      }
-    });
+    state.selections.other.forEach((id: string) => add(OTHER_OPTIONS.find(o => o.id === id), 'Other'));
 
     return items;
-  }, [state.selections, currentRegion.costMultiplier, internetOptions, utilityOptions, streamingOptions, subscriptionOptions, insuranceOptions, phoneOptions, phonePlanOptions, transportOptions]);
+  }, [state.selections, currentRegion.costMultiplier, internetOptions, utilityOptions, streamingOptions, subscriptionOptions, clothingOptions, insuranceOptions, phoneOptions, phonePlanOptions, transportOptions]);
 
   const categoryData = useMemo(() => {
     const categories: { [key: string]: number } = {};
@@ -2108,67 +4136,7 @@ function ResultsStep({ state, monthlyTotal, annualTotal, recommendedSalary, onRe
     return Object.entries(categories).map(([name, value]) => ({ name, value }));
   }, [details]);
 
-  const breakdownRows = useMemo(() => {
-    const groupedCategories = new Set(RESULTS_GROUPED_CATEGORIES);
-    const rows: Array<
-      | { type: 'item'; item: { name: string; cost: number; category: string; emoji?: string } }
-      | { type: 'group'; category: string; emoji?: string; count: number; subtotal: number; items: { name: string; cost: number; category: string; emoji?: string }[] }
-    > = [];
-    const groupedItems = new Map<string, { name: string; cost: number; category: string; emoji?: string }[]>();
-
-    details.forEach((item) => {
-      if (groupedCategories.has(item.category)) {
-        groupedItems.set(item.category, [...(groupedItems.get(item.category) || []), item]);
-      } else {
-        rows.push({ type: 'item', item });
-      }
-    });
-
-    groupedItems.forEach((items, category) => {
-      if (items.length === 1) {
-        rows.push({ type: 'item', item: items[0] });
-        return;
-      }
-
-      rows.push({
-        type: 'group',
-        category,
-        emoji: items[0]?.emoji,
-        count: items.length,
-        subtotal: items.reduce((sum, item) => sum + item.cost, 0),
-        items,
-      });
-    });
-
-    return rows;
-  }, [details]);
-
-  const rankedCareerMatches = useMemo(
-    () => rankCareerMatches(careers, riasecSummary, monthlyTotal),
-    [careers, riasecSummary, monthlyTotal]
-  );
-  const openCareer = useMemo(
-    () => rankedCareerMatches.find((career, index) => `${career.title}-${index}` === openCareerKey) || null,
-    [rankedCareerMatches, openCareerKey]
-  );
-  const toggleBreakdownCategory = (category: string) => {
-    setExpandedBreakdownCategories(prev =>
-      prev.includes(category)
-        ? prev.filter(item => item !== category)
-        : [...prev, category]
-    );
-  };
-
-  const budgetChartColors = ['#6366f1', '#f59e0b', '#10b981', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#f97316'];
-
-  if (isCalculatorDataLoading) {
-    return (
-      <div className="py-24 flex flex-col items-center justify-center gap-4 text-slate-400">
-        <Loader2 className="w-10 h-10 animate-spin" />
-        <p className="text-xs font-black uppercase tracking-widest">Finalizing your calculator results...</p>
-      </div>
-    );
-  }
+  const COLORS = ['#6366f1', '#f59e0b', '#10b981', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#f97316'];
 
   return (
     <div className="space-y-12 py-8">
@@ -2181,7 +4149,7 @@ function ResultsStep({ state, monthlyTotal, annualTotal, recommendedSalary, onRe
           <CheckCircle2 className="w-12 h-12" />
         </motion.div>
         <h2 className="text-5xl font-black text-slate-900">Your Future Awaits!</h2>
-        <p className="text-xl text-slate-500 max-w-2xl mx-auto">Based on your choices in <span className="text-slate-900 font-bold">{currentRegion.name}</span>, here is what you'll need to earn.</p>
+        <p className="text-xl text-slate-500 max-w-2xl mx-auto">Based on your choices in <span className="text-slate-900 font-bold">{currentRegion.emoji} {currentRegion.name}</span>, here is what you'll need to earn.</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -2195,67 +4163,18 @@ function ResultsStep({ state, monthlyTotal, annualTotal, recommendedSalary, onRe
               </div>
             </div>
             <div className="p-8 space-y-4">
-              {breakdownRows.map((row, i) => {
-                if (row.type === 'item') {
-                  const { item } = row;
-                  return (
-                    <div key={`${item.category}-${item.name}-${i}`} className="flex justify-between items-center py-3 border-b border-slate-50 last:border-0">
-                      <div className="flex items-center gap-4">
-                        <span className="text-2xl w-8 h-8 flex items-center justify-center bg-slate-50 rounded-lg">{item.emoji}</span>
-                        <div className="flex flex-col">
-                          <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">{item.category}</span>
-                          <span className="font-bold text-slate-700">{item.name}</span>
-                        </div>
-                      </div>
-                      <span className="font-black text-slate-900">${formatMonthlyCurrency(item.cost)}</span>
+              {details.map((item, i) => (
+                <div key={i} className="flex justify-between items-center py-3 border-b border-slate-50 last:border-0">
+                  <div className="flex items-center gap-4">
+                    <span className="text-2xl w-8 h-8 flex items-center justify-center bg-slate-50 rounded-lg">{item.emoji}</span>
+                    <div className="flex flex-col">
+                      <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">{item.category}</span>
+                      <span className="font-bold text-slate-700">{item.name}</span>
                     </div>
-                  );
-                }
-
-                const isExpanded = expandedBreakdownCategories.includes(row.category);
-
-                return (
-                  <div key={`${row.category}-${i}`} className="rounded-2xl border border-slate-100 bg-slate-50/70">
-                    <button
-                      onClick={() => toggleBreakdownCategory(row.category)}
-                      className="flex w-full items-center justify-between gap-4 p-4 text-left transition-all hover:bg-slate-100/70"
-                      aria-expanded={isExpanded}
-                    >
-                      <div className="flex items-center gap-4">
-                        <span className="text-2xl w-8 h-8 flex items-center justify-center bg-white rounded-lg">{row.emoji}</span>
-                        <div className="flex flex-col">
-                          <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">{row.category}</span>
-                          <span className="font-bold text-slate-700">{row.count} selected</span>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <span className="font-black text-slate-900">${formatMonthlyCurrency(row.subtotal)}</span>
-                        <ChevronDown className={`h-5 w-5 text-slate-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
-                      </div>
-                    </button>
-                    <AnimatePresence initial={false}>
-                      {isExpanded && (
-                        <motion.div
-                          initial={{ height: 0, opacity: 0 }}
-                          animate={{ height: 'auto', opacity: 1 }}
-                          exit={{ height: 0, opacity: 0 }}
-                          transition={{ duration: 0.2, ease: 'easeOut' }}
-                          className="overflow-hidden"
-                        >
-                          <div className="space-y-2 border-t border-slate-100 px-4 py-3">
-                            {row.items.map((item) => (
-                              <div key={`${row.category}-${item.name}`} className="flex items-center justify-between gap-4 rounded-xl bg-white px-3 py-2">
-                                <span className="text-sm font-bold text-slate-600">{item.name}</span>
-                                <span className="text-sm font-black text-slate-900">${formatMonthlyCurrency(item.cost)}</span>
-                              </div>
-                            ))}
-                          </div>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
                   </div>
-                );
-              })}
+                  <span className="font-black text-slate-900">${item.cost.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                </div>
+              ))}
             </div>
           </div>
 
@@ -2280,14 +4199,11 @@ function ResultsStep({ state, monthlyTotal, annualTotal, recommendedSalary, onRe
                     dataKey="value"
                   >
                     {categoryData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={budgetChartColors[index % budgetChartColors.length]} />
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
                   <Tooltip 
-                    formatter={(value) => [
-                      `$${typeof value === 'number' ? value.toLocaleString() : value ?? ''}`,
-                      'Monthly Cost'
-                    ]}
+                    formatter={(value: number) => [`$${value.toLocaleString()}`, 'Monthly Cost']}
                     contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
                   />
                   <Legend verticalAlign="bottom" height={36}/>
@@ -2310,7 +4226,7 @@ function ResultsStep({ state, monthlyTotal, annualTotal, recommendedSalary, onRe
           <div className="bg-orange-500 rounded-3xl p-8 text-white shadow-xl shadow-orange-200 space-y-6">
             <div className="space-y-1">
               <p className="text-orange-100 text-sm font-bold uppercase tracking-widest">Minimum Annual Salary</p>
-              <h4 className="text-5xl font-black">${displayedRecommendedSalary}</h4>
+              <h4 className="text-5xl font-black">${recommendedSalary.toLocaleString(undefined, { maximumFractionDigits: 0 })}</h4>
             </div>
             <p className="text-orange-50/80 font-medium leading-relaxed">
               This represents the total cost of your selected lifestyle over one full year (12 months).
@@ -2365,15 +4281,7 @@ function ResultsStep({ state, monthlyTotal, annualTotal, recommendedSalary, onRe
             </div>
             
             <p className="text-sm text-slate-500 leading-relaxed">
-              {riasecSummary ? (
-                <>
-                  Based on your <span className="font-bold text-slate-900">{riasecSummary.topThree}</span> RIASEC pattern and target salary of <span className="font-bold text-slate-900">${displayedRecommendedSalary}</span>, here are careers to explore in <span className="font-bold text-slate-900">{currentRegion.name}</span>:
-                </>
-              ) : (
-                <>
-                  Based on your target salary of <span className="font-bold text-slate-900">${displayedRecommendedSalary}</span>, here are some high-demand careers in <span className="font-bold text-slate-900">{currentRegion.name}</span>:
-                </>
-              )}
+              Based on your target salary of <span className="font-bold text-slate-900">${recommendedSalary.toLocaleString()}</span>, here are some high-demand careers in <span className="font-bold text-slate-900">{currentRegion.name}</span>:
             </p>
 
             <div className="space-y-4">
@@ -2382,19 +4290,32 @@ function ResultsStep({ state, monthlyTotal, annualTotal, recommendedSalary, onRe
                   <Loader2 className="w-8 h-8 animate-spin" />
                   <p className="text-xs font-bold uppercase tracking-widest">Finding your matches...</p>
                 </div>
-              ) : rankedCareerMatches.length > 0 ? (
-                rankedCareerMatches.map((career, i) => {
-                  const careerKey = `${career.title}-${i}`;
-                  return (
-                    <CareerMatchCard
-                      key={careerKey}
-                      career={career}
-                      index={i}
-                      showRiasecTags={!!riasecSummary}
-                      onViewDetails={() => setOpenCareerKey(careerKey)}
-                    />
-                  );
-                })
+              ) : careers.length > 0 ? (
+                careers.map((career, i) => (
+                  <motion.div 
+                    key={i}
+                    initial={{ x: 20, opacity: 0 }}
+                    animate={{ x: 0, opacity: 1 }}
+                    transition={{ delay: i * 0.1 }}
+                    className="p-4 bg-slate-50 rounded-2xl border border-slate-100 hover:border-indigo-200 hover:bg-indigo-50/30 transition-all group"
+                  >
+                    <div className="flex justify-between items-start mb-2">
+                      <h4 className="font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">{career.title}</h4>
+                      <TrendingUp className="w-4 h-4 text-green-500" />
+                    </div>
+                    <p className="text-xs text-slate-500 mb-3 line-clamp-2">{career.description}</p>
+                    <div className="flex flex-wrap gap-2">
+                      <div className="flex items-center gap-1 px-2 py-1 bg-white border border-slate-100 rounded-lg text-[10px] font-bold text-slate-400 uppercase tracking-tighter">
+                        <GraduationCap className="w-3 h-3" />
+                        {career.education}
+                      </div>
+                      <div className="flex items-center gap-1 px-2 py-1 bg-white border border-slate-100 rounded-lg text-[10px] font-bold text-slate-400 uppercase tracking-tighter">
+                        <Briefcase className="w-3 h-3" />
+                        {career.avgSalary}
+                      </div>
+                    </div>
+                  </motion.div>
+                ))
               ) : (
                 <div className="p-4 bg-slate-50 rounded-2xl border border-dashed border-slate-200 text-center">
                   <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">No matches found. Try again!</p>
@@ -2411,9 +4332,6 @@ function ResultsStep({ state, monthlyTotal, annualTotal, recommendedSalary, onRe
           </button>
         </div>
       </div>
-      <CareerDetailModal career={openCareer} onClose={() => setOpenCareerKey(null)} />
     </div>
   );
 }
-
-
