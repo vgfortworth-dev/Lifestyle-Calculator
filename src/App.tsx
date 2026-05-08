@@ -665,7 +665,7 @@ export default function App() {
     utilityOptions,
     streamingOptions,
     subscriptionOptions,
-    clothingOptions,
+    clothingItems,
     insuranceOptions,
     phonePlanOptions,
     phoneDeviceOptions,
@@ -740,28 +740,51 @@ export default function App() {
     }
   });
 
+  const safeSteps = Array.isArray(STEPS) ? STEPS : [];
+  const safeRegions = Array.isArray(regions) ? regions : [];
+  const safeInternetOptions = Array.isArray(internetOptions) ? internetOptions : [];
+  const safeUtilityOptions = Array.isArray(utilityOptions) ? utilityOptions : [];
+  const safeStreamingOptions = Array.isArray(streamingOptions) ? streamingOptions : [];
+  const safeSubscriptionOptions = Array.isArray(subscriptionOptions) ? subscriptionOptions : [];
+  const safeClothingItems = Array.isArray(clothingItems) ? clothingItems : [];
+  const safeInsuranceOptions = Array.isArray(insuranceOptions) ? insuranceOptions : [];
+  const safePhonePlanOptions = Array.isArray(phonePlanOptions) ? phonePlanOptions : [];
+  const safePhoneDeviceOptions = Array.isArray(phoneDeviceOptions) ? phoneDeviceOptions : [];
+  const safeTransportOptions = Array.isArray(transportOptions) ? transportOptions : [];
+  const supabaseClothingOptions = safeClothingItems.map((item: any) => ({
+    id: item.id,
+    name: item.name,
+    category: item.category,
+    description: item.description,
+    monthlyCost:
+      typeof item.price === 'number' && typeof item.lifespan_months === 'number' && item.lifespan_months > 0
+        ? Number((item.price / item.lifespan_months).toFixed(2))
+        : 0,
+    image: item.image_url,
+  }));
+
   // Region-based data
-  const activeRegions = USE_SUPABASE && regions.length ? regions : REGIONS;
-  const activeInternetOptions = USE_SUPABASE && internetOptions.length ? internetOptions : INTERNET_OPTIONS;
-  const activeUtilityOptions = USE_SUPABASE && utilityOptions.length ? utilityOptions : UTILITY_OPTIONS;
+  const activeRegions = USE_SUPABASE && safeRegions.length ? safeRegions : REGIONS;
+  const activeInternetOptions = USE_SUPABASE && safeInternetOptions.length ? safeInternetOptions : INTERNET_OPTIONS;
+  const activeUtilityOptions = USE_SUPABASE && safeUtilityOptions.length ? safeUtilityOptions : UTILITY_OPTIONS;
 
   // Global data
-  const activeStreamingOptions = USE_SUPABASE && streamingOptions.length ? streamingOptions : STREAMING_OPTIONS;
-  const activeSubscriptionOptions = USE_SUPABASE && subscriptionOptions.length ? subscriptionOptions : SUBSCRIPTION_OPTIONS;
-  const activeClothingOptions = USE_SUPABASE && clothingOptions.length ? clothingOptions : CLOTHING_OPTIONS;
-  const activeInsuranceOptions = getEnhancedInsuranceOptions(USE_SUPABASE && insuranceOptions.length ? insuranceOptions : INSURANCE_OPTIONS);
-  const activePhonePlanOptions = USE_SUPABASE && phonePlanOptions.length ? phonePlanOptions : PHONE_PLAN_OPTIONS;
-  const activeTransportOptions = transportOptions.length ? transportOptions : TRANSPORT_OPTIONS;
-  const activePhoneDeviceOptions = USE_SUPABASE && phoneDeviceOptions.length
-    ? phoneDeviceOptions
+  const activeStreamingOptions = USE_SUPABASE && safeStreamingOptions.length ? safeStreamingOptions : STREAMING_OPTIONS;
+  const activeSubscriptionOptions = USE_SUPABASE && safeSubscriptionOptions.length ? safeSubscriptionOptions : SUBSCRIPTION_OPTIONS;
+  const activeClothingOptions = USE_SUPABASE && supabaseClothingOptions.length ? supabaseClothingOptions : CLOTHING_OPTIONS;
+  const activeInsuranceOptions = getEnhancedInsuranceOptions(USE_SUPABASE && safeInsuranceOptions.length ? safeInsuranceOptions : INSURANCE_OPTIONS);
+  const activePhonePlanOptions = USE_SUPABASE && safePhonePlanOptions.length ? safePhonePlanOptions : PHONE_PLAN_OPTIONS;
+  const activeTransportOptions = safeTransportOptions.length ? safeTransportOptions : TRANSPORT_OPTIONS;
+  const activePhoneDeviceOptions = USE_SUPABASE && safePhoneDeviceOptions.length
+    ? safePhoneDeviceOptions
     : [
         ...PHONE_SUB_OPTIONS.refurbished.map(p => ({ ...p, category: 'refurbished' })),
         ...PHONE_SUB_OPTIONS.new.map(p => ({ ...p, category: 'new' }))
       ];
-  const activePhoneOptions = USE_SUPABASE && phoneDeviceOptions.length
+  const activePhoneOptions = USE_SUPABASE && safePhoneDeviceOptions.length
     ? [
         PHONE_OPTIONS[0],
-        ...phoneDeviceOptions.map((p: any) => ({
+        ...safePhoneDeviceOptions.map((p: any) => ({
           ...p,
           monthlyCost: Number(p.price) / Number(p.months),
         }))
@@ -918,10 +941,10 @@ export default function App() {
   const recommendedSalary = annualTotal; // Simple 12-month total
   const fuelPlanType = getFuelPlanType(state.selections.transportation);
   const availableFuelOptions = getFuelOptionsForType(fuelPlanType);
-  const fuelPlanRequired = STEPS[state.currentStep] === 'Fuel' && fuelPlanType !== 'none';
+  const fuelPlanRequired = safeSteps[state.currentStep] === 'Fuel' && fuelPlanType !== 'none';
   const canAdvanceCurrentStep = !fuelPlanRequired || availableFuelOptions.some(option => option.id === state.selections.fuel);
   const firstQuestionStep = 1;
-  const lastQuestionStep = STEPS.length - 2;
+  const lastQuestionStep = safeSteps.length - 2;
   const totalQuestionSteps = lastQuestionStep - firstQuestionStep + 1;
   const currentQuestionStep = Math.max(0, Math.min(state.currentStep - firstQuestionStep + 1, totalQuestionSteps));
   const progressPercent = totalQuestionSteps > 0 ? (currentQuestionStep / totalQuestionSteps) * 100 : 0;
@@ -929,7 +952,7 @@ export default function App() {
   const nextStep = () => {
     if (!canAdvanceCurrentStep) return;
 
-    if (state.currentStep < STEPS.length - 1) {
+    if (state.currentStep < safeSteps.length - 1) {
       setState(prev => ({ ...prev, currentStep: prev.currentStep + 1 }));
       window.scrollTo(0, 0);
     }
@@ -970,7 +993,7 @@ export default function App() {
   };
 
   const renderStep = () => {
-    const stepName = STEPS[state.currentStep];
+    const stepName = safeSteps[state.currentStep];
 
     switch (stepName) {
       case 'Welcome':
@@ -1263,11 +1286,11 @@ export default function App() {
     <div className="relative min-h-screen bg-slate-50 font-sans text-slate-900 pb-52 sm:pb-32">
       <Nav
         session={session}
-        stepLabel={showHistory ? 'History' : STEPS[state.currentStep]}
+        stepLabel={showHistory ? 'History' : safeSteps[state.currentStep]}
         currentQuestionStep={currentQuestionStep}
         totalQuestionSteps={totalQuestionSteps}
         progressPercent={progressPercent}
-        showProgress={!showHistory && state.currentStep > 0 && state.currentStep < STEPS.length - 1}
+        showProgress={!showHistory && state.currentStep > 0 && state.currentStep < safeSteps.length - 1}
         onReset={resetQuiz}
         onToggleHistory={() => setShowHistory(!showHistory)}
       />
@@ -1290,9 +1313,9 @@ export default function App() {
         )}
       </main>
 
-      <FeedbackTool stepName={showHistory ? 'History' : STEPS[state.currentStep]} userId={session.user.id} />
+      <FeedbackTool stepName={showHistory ? 'History' : safeSteps[state.currentStep]} userId={session.user.id} />
 
-      {!showHistory && state.currentStep > 0 && state.currentStep < STEPS.length - 1 && (
+      {!showHistory && state.currentStep > 0 && state.currentStep < safeSteps.length - 1 && (
         <motion.footer 
           initial={{ y: 100 }}
           animate={{ y: 0 }}
