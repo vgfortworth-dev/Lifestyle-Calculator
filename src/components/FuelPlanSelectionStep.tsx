@@ -12,6 +12,7 @@ import { StableEmoji, UsageBadgeEmoji } from './StableEmoji';
 type FuelPlanSelectionStepProps = {
   state: QuizState;
   onSelect: SelectionChangeHandler;
+  hasTransportationSelection: boolean;
   fuelPlanType: FuelPlanType;
   options: Option[];
   fuelPriceEnvironment: FuelPriceEnvironment;
@@ -21,11 +22,13 @@ type FuelPlanSelectionStepProps = {
   usageBadgeStyles: Record<string, string>;
   usageBadgeIcons: Record<string, string>;
   headerBlue: string;
+  onGoBack: () => void;
 };
 
 export function FuelPlanSelectionStep({
   state,
   onSelect,
+  hasTransportationSelection,
   fuelPlanType,
   options,
   fuelPriceEnvironment,
@@ -35,6 +38,7 @@ export function FuelPlanSelectionStep({
   usageBadgeStyles,
   usageBadgeIcons,
   headerBlue,
+  onGoBack,
 }: FuelPlanSelectionStepProps) {
   void usageBadgeIcons;
   const [showLesson, setShowLesson] = useState(false);
@@ -55,6 +59,8 @@ export function FuelPlanSelectionStep({
   };
 
   if (fuelPlanType === 'none') {
+    const skippedTransportation = !hasTransportationSelection;
+
     return (
       <div className="space-y-8">
         <BeforeYouChooseCallout
@@ -64,11 +70,32 @@ export function FuelPlanSelectionStep({
           onLessonClick={() => setShowLesson(true)}
         />
         <div className="rounded-3xl border border-emerald-100 bg-emerald-50 p-8 text-center">
-          <StableEmoji symbol="\u2728" className="mb-3 block text-4xl leading-none" />
-          <h3 className="text-2xl font-black text-emerald-700">No Fuel Plan Needed</h3>
+          <StableEmoji
+            symbol={skippedTransportation ? '\u{1F698}' : '\u2728'}
+            className="mb-3 block text-4xl leading-none"
+          />
+          <h3 className="text-2xl font-black text-emerald-700">
+            {skippedTransportation ? 'No Transportation Selected' : 'No Fuel Plan Needed'}
+          </h3>
           <p className="mt-2 text-sm font-medium leading-relaxed text-emerald-900/80">
-            Your current transportation choice does not need a monthly gas or EV charging plan.
+            {skippedTransportation
+              ? 'Go back to choose how you will get around, or continue if you do not want to include transportation costs.'
+              : 'Your current transportation choice does not need a monthly gas or EV charging plan.'}
           </p>
+          {skippedTransportation && (
+            <div className="mt-5 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
+              <button
+                type="button"
+                onClick={onGoBack}
+                className="rounded-2xl bg-orange-500 px-5 py-3 text-sm font-black text-white transition-all hover:bg-orange-600"
+              >
+                Back to Transportation
+              </button>
+              <p className="text-xs font-bold uppercase tracking-widest text-emerald-800/70">
+                You can still continue if you want to skip transportation costs.
+              </p>
+            </div>
+          )}
         </div>
         <FuelLessonModal isOpen={showLesson} onClose={() => setShowLesson(false)} />
       </div>

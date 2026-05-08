@@ -946,6 +946,7 @@ export default function App() {
             <FuelPlanSelectionStep
               state={state}
               onSelect={handleSelection}
+              hasTransportationSelection={state.selections.transportation.length > 0}
               fuelPlanType={fuelPlanType}
               options={availableFuelOptions}
               fuelPriceEnvironment={state.selections.fuelPriceEnvironment}
@@ -955,6 +956,7 @@ export default function App() {
               usageBadgeStyles={USAGE_BADGE_STYLES}
               usageBadgeIcons={USAGE_BADGE_EMOJIS}
               headerBlue={COLORS.headerBlue}
+              onGoBack={prevStep}
             />
           </QuizWrapper>
         );
