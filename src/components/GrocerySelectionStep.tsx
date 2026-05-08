@@ -240,6 +240,17 @@ export function GrocerySelectionStep({
                     : 'border-slate-100 hover:border-[#D6E4F0] hover:bg-[#F3F7FB] hover:shadow-[0_2px_6px_rgba(0,0,0,0.05)]'
                 } ${lastChangedItemId === item.id ? 'scale-[1.01]' : ''}`}
               >
+                <div className="mb-4 h-48 overflow-hidden rounded-2xl bg-slate-100">
+                  <img
+                    src={item.imageUrl}
+                    alt={item.name}
+                    className="h-full w-full object-cover"
+                    loading="lazy"
+                    decoding="async"
+                    referrerPolicy="no-referrer"
+                  />
+                </div>
+
                 <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="rounded-full bg-white px-3 py-1 text-[11px] font-black uppercase tracking-wide text-slate-500 shadow-sm">

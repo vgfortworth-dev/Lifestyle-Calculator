@@ -9,7 +9,7 @@ import html2canvas from 'html2canvas';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 import { 
   MapPin, Home, ShieldCheck, ChevronRight, ChevronLeft, ChevronDown,
-  RotateCcw, Info, CheckCircle2, Calculator,
+  RotateCcw, Info, CheckCircle2,
   Save, Loader2, Check, Sparkles,
   Camera, MessageSquare, X,
   PieChart as PieChartIcon 
@@ -27,9 +27,9 @@ import {
   SUBSCRIPTION_OPTIONS,
   TRANSPORT_OPTIONS,
   INSURANCE_OPTIONS,
-  OTHER_OPTIONS,
 } from './data/texasData';
 import { ALL_FUEL_OPTIONS, EV_FUEL_OPTIONS, GAS_FUEL_OPTIONS } from './data/fuelOptions';
+import { OTHER_OPTIONS } from './data/otherServices';
 import { QuizState, STEPS, Option } from './types';
 import { FuelPlanType } from './types/options';
 import {
@@ -55,7 +55,9 @@ import { InfoButton } from './components/InfoButton';
 import { InsuranceInfoStep } from './components/InsuranceInfoStep';
 import { InsuranceSelectionStep } from './components/InsuranceSelectionStep';
 import { InternetSelectionStep } from './components/InternetSelectionStep';
+import { ModalShell } from './components/ModalShell';
 import { Nav } from './components/Nav';
+import { OtherServicesStep } from './components/OtherServicesStep';
 import { PhonePlanSelectionStep } from './components/PhonePlanSelectionStep';
 import { PhoneSelectionStep } from './components/PhoneSelectionStep';
 import { QuizWrapper } from './components/QuizWrapper';
@@ -93,7 +95,7 @@ const INITIAL_STATE: QuizState = {
     fuelPriceEnvironment: 'average',
     clothingCloset: {},
     insurance: [],
-    other: [],
+    other: {},
   },
 };
 
@@ -132,28 +134,65 @@ const COLORS = {
 };
 
 const USE_SUPABASE = true;
+const APP_LOGO_SRC = '/images/Liestyle calculator logo_Lifestyle Calculator Logo.svg';
+const INTRO_VIDEO_URL = 'https://www.youtube.com/watch?v=YOUR_VIDEO_ID';
+const INTRO_VIDEO_STORAGE_KEY = 'lifestyleCalculatorIntroSeen';
+
+function getIntroVideoEmbedUrl(url: string) {
+  const trimmedUrl = url.trim();
+  if (!trimmedUrl || /YOUR_VIDEO_ID|VIDEO_ID_HERE/i.test(trimmedUrl)) {
+    return null;
+  }
+
+  try {
+    const parsedUrl = new URL(trimmedUrl);
+    const hostname = parsedUrl.hostname.replace(/^www\./, '');
+
+    if (hostname === 'youtu.be') {
+      const videoId = parsedUrl.pathname.replace(/^\/+/, '').split('/')[0];
+      return videoId ? `https://www.youtube.com/embed/${videoId}` : null;
+    }
+
+    if (hostname === 'youtube.com' || hostname === 'm.youtube.com') {
+      if (parsedUrl.pathname === '/watch') {
+        const videoId = parsedUrl.searchParams.get('v');
+        return videoId ? `https://www.youtube.com/embed/${videoId}` : null;
+      }
+
+      if (parsedUrl.pathname.startsWith('/embed/')) {
+        return trimmedUrl;
+      }
+    }
+  } catch {
+    return null;
+  }
+
+  return null;
+}
 
 function LocationIcon({ region }: { region: { name: string; emoji?: string; image?: string } }) {
   const [iconFailed, setIconFailed] = useState(false);
 
   if (region.image && !iconFailed) {
     return (
-      <img
-        src={region.image}
-        alt={`${region.name} icon`}
-        className="h-8 w-8 shrink-0 object-contain"
-        onError={() => {
-          console.error('Failed to load location icon:', region.name, region.image);
-          setIconFailed(true);
-        }}
-      />
+      <div className="h-10 w-10 shrink-0 flex items-center justify-center">
+        <img
+          src={region.image}
+          alt={`${region.name} icon`}
+          className="h-10 w-10 object-contain block"
+          onError={() => {
+            console.error('Failed to load location icon:', region.name, region.image);
+            setIconFailed(true);
+          }}
+        />
+      </div>
     );
   }
 
   return (
-    <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center text-2xl leading-none">
-      {region.emoji}
-    </span>
+    <div className="h-10 w-10 shrink-0 flex items-center justify-center">
+      <span className="text-3xl leading-none">{region.emoji}</span>
+    </div>
   );
 }
 const REQUIRED_INDEPENDENT_UTILITY_IDS = ['water', 'trash'];
@@ -243,6 +282,8 @@ export default function App() {
   const [session, setSession] = useState<any>(null);
   const [showHistory, setShowHistory] = useState(false);
   const [routePath, setRoutePath] = useState(() => window.location.pathname);
+  const [isIntroVideoOpen, setIsIntroVideoOpen] = useState(false);
+  const [hasCheckedIntroVideo, setHasCheckedIntroVideo] = useState(false);
   const [riasecSummary, setRiasecSummary] = useState<RiasecSummary | null>(() =>
     getHistoryRiasecSummary() || loadRiasecSummary()
   );
@@ -324,6 +365,28 @@ export default function App() {
       if ('clothing' in migrated.selections) {
         delete migrated.selections.clothing;
       }
+      if (Array.isArray(migrated.selections.other)) {
+        migrated.selections.other = migrated.selections.other.reduce((acc: Record<string, any>, id: string) => {
+          const option = OTHER_OPTIONS.find((candidate) => candidate.id === id);
+          if (!option) return acc;
+          acc[id] = {
+            id: option.id,
+            name: option.name,
+            price: option.monthlyCost,
+            quantity: 1,
+            description: option.description,
+            emoji: option.emoji,
+            category: option.category,
+            type: option.type,
+          };
+          return acc;
+        }, {});
+      } else if (
+        !migrated.selections.other ||
+        typeof migrated.selections.other !== 'object'
+      ) {
+        migrated.selections.other = {};
+      }
 
       return migrated;
     } catch {
@@ -368,11 +431,28 @@ export default function App() {
         }))
       ]
     : PHONE_OPTIONS;
+  const introVideoEmbedUrl = useMemo(() => getIntroVideoEmbedUrl(INTRO_VIDEO_URL), []);
+  const isWelcomeScreen = routePath === '/' && STEPS[state.currentStep] === 'Welcome';
 
   // Persistence and session effects
   useEffect(() => {
     localStorage.setItem('lifestyle_calculator_state', JSON.stringify(state));
   }, [state]);
+
+  useEffect(() => {
+    if (!isWelcomeScreen || hasCheckedIntroVideo) return;
+
+    const hasSeenIntro = localStorage.getItem(INTRO_VIDEO_STORAGE_KEY) === 'true';
+    if (!hasSeenIntro) {
+      setIsIntroVideoOpen(true);
+    }
+    setHasCheckedIntroVideo(true);
+  }, [hasCheckedIntroVideo, isWelcomeScreen]);
+
+  useEffect(() => {
+    if (isWelcomeScreen) return;
+    setIsIntroVideoOpen(false);
+  }, [isWelcomeScreen]);
 
   useEffect(() => {
     const handleRouteChange = () => {
@@ -525,9 +605,8 @@ export default function App() {
     });
 
     // Other
-    state.selections.other.forEach(id => {
-      const opt = OTHER_OPTIONS.find(o => o.id === id);
-      if (opt) total += opt.monthlyCost;
+    Object.values(state.selections.other).forEach((entry: any) => {
+      total += entry.price * entry.quantity;
     });
 
     return total;
@@ -611,6 +690,16 @@ export default function App() {
     }));
   };
 
+  const handleOtherServicesChange = (other: QuizState['selections']['other']) => {
+    setState(prev => ({
+      ...prev,
+      selections: {
+        ...prev.selections,
+        other,
+      },
+    }));
+  };
+
   const openRiasecQuiz = () => {
     window.history.pushState({}, '', '/riasec');
     setRoutePath('/riasec');
@@ -633,6 +722,15 @@ export default function App() {
     window.scrollTo(0, 0);
   };
 
+  const openIntroVideo = () => {
+    setIsIntroVideoOpen(true);
+  };
+
+  const closeIntroVideo = () => {
+    setIsIntroVideoOpen(false);
+    localStorage.setItem(INTRO_VIDEO_STORAGE_KEY, 'true');
+  };
+
   // Step rendering
   const renderStep = () => {
     const stepName = STEPS[state.currentStep];
@@ -644,31 +742,40 @@ export default function App() {
             <motion.div 
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              className="w-32 h-32 bg-orange-500 rounded-full flex items-center justify-center shadow-xl shadow-orange-200"
+              className="mb-6 flex items-center justify-center md:mb-10"
             >
-              <Calculator className="w-16 h-16 text-white" />
+              <img
+                src={APP_LOGO_SRC}
+                alt="Lifestyle Calculator logo"
+                className="h-24 w-auto object-contain sm:h-28"
+              />
             </motion.div>
             <div className="space-y-4 max-w-2xl">
-              <h1 className="text-5xl font-black text-slate-900 tracking-tight">
-                The Lifestyle <span className="text-orange-500">Calculator</span>
-              </h1>
               <p className="text-xl text-slate-600 font-medium leading-relaxed">
                 Ever wondered what it actually costs to live the life you want in Texas? 
                 Let's build your future budget together.
               </p>
             </div>
-            <button 
-              onClick={nextStep}
-              className="px-10 py-5 bg-slate-900 text-white rounded-2xl text-xl font-bold hover:bg-slate-800 transition-all shadow-lg hover:shadow-xl active:scale-95 flex items-center gap-3"
-            >
-              Start My Journey <ChevronRight className="w-6 h-6" />
-            </button>
-            <button
-              onClick={openRiasecQuiz}
-              className="px-8 py-4 bg-white text-slate-700 rounded-2xl text-base font-black hover:bg-slate-100 transition-all shadow-sm border border-slate-100 active:scale-95"
-            >
-              Take the RIASEC Career Quiz
-            </button>
+            <div className="flex w-full max-w-md flex-col gap-4">
+              <button 
+                onClick={nextStep}
+                className="flex items-center justify-center gap-3 rounded-2xl bg-slate-900 px-10 py-5 text-xl font-bold text-white shadow-lg transition-all hover:bg-slate-800 hover:shadow-xl active:scale-95"
+              >
+                Start My Journey <ChevronRight className="w-6 h-6" />
+              </button>
+              <button
+                onClick={openIntroVideo}
+                className="rounded-2xl border border-blue-100 bg-blue-50/70 px-8 py-4 text-base font-black text-[#3372B2] shadow-sm transition-all hover:border-blue-200 hover:bg-blue-50 active:scale-95"
+              >
+                Watch Introduction Video
+              </button>
+              <button
+                onClick={openRiasecQuiz}
+                className="rounded-2xl border border-slate-100 bg-white px-8 py-4 text-base font-black text-slate-700 shadow-sm transition-all hover:bg-slate-100 active:scale-95"
+              >
+                Take the RIASEC Career Quiz
+              </button>
+            </div>
             {riasecSummary && (
               <div className="max-w-2xl rounded-3xl border border-blue-100 bg-blue-50/80 p-5 text-left shadow-sm">
                 <p className="text-xs font-black uppercase tracking-widest text-[#3372B2]">Career interest summary loaded</p>
@@ -914,12 +1021,9 @@ export default function App() {
       case 'Other Services':
         return (
           <QuizWrapper colors={COLORS} title="Other Services" description="The little things that add up.">
-            <MultiSelectionStep
-              options={OTHER_OPTIONS}
-              category="other"
+            <OtherServicesStep
               state={state}
-              onToggle={toggleMultiSelection}
-              onNext={nextStep}
+              onChange={handleOtherServicesChange}
             />
           </QuizWrapper>
         );
@@ -967,77 +1071,118 @@ export default function App() {
   }
 
   return (
-    <div className="relative min-h-screen bg-slate-50 font-sans text-slate-900 pb-52 sm:pb-32">
-      <Nav
-        sessionEmail={session.user.email}
-        stepLabel={showHistory ? 'History' : STEPS[state.currentStep]}
-        currentQuestionStep={currentQuestionStep}
-        totalQuestionSteps={totalQuestionSteps}
-        progressPercent={progressPercent}
-        showProgress={!showHistory && state.currentStep > 0 && state.currentStep < STEPS.length - 1}
-        onReset={resetQuiz}
-        onToggleHistory={() => setShowHistory(!showHistory)}
-        onSignOut={() => supabase.auth.signOut()}
-      />
-
-      <main className="max-w-5xl mx-auto px-6 pt-8">
-        {showHistory ? (
-          <HistoryPage userId={session.user.id} />
-        ) : (
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={state.currentStep}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.3 }}
-            >
-              {renderStep()}
-            </motion.div>
-          </AnimatePresence>
-        )}
-      </main>
-
-      <FeedbackTool stepName={showHistory ? 'History' : STEPS[state.currentStep]} userId={session.user.id} />
-
-      {!showHistory && state.currentStep > 0 && state.currentStep < STEPS.length - 1 && (
-        <motion.footer 
-          initial={{ y: 100 }}
-          animate={{ y: 0 }}
-          className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100 p-6 z-50 shadow-2xl"
-        >
-          <div className="max-w-5xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-6">
-            <div className="flex items-center gap-8">
-              <div className="flex flex-col">
-                <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Monthly Total</span>
-                <span className="text-3xl font-black text-slate-900">${monthlyTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+    <>
+      <ModalShell
+        isOpen={isIntroVideoOpen}
+        onClose={closeIntroVideo}
+        title="Welcome to the Lifestyle Calculator"
+        subtitle="Watch this quick introduction before you begin. You can rewatch it anytime from the home screen."
+        eyebrow="Introduction Video"
+        labelledBy="intro-video-modal-title"
+        footerLabel="Close Video"
+        maxWidthClassName="max-w-4xl"
+        bodyClassName="space-y-4 p-5 sm:p-6"
+      >
+        <div className="overflow-hidden rounded-[28px] border border-slate-100 bg-slate-950 shadow-sm">
+          <div className="aspect-video w-full">
+            {introVideoEmbedUrl ? (
+              <iframe
+                src={introVideoEmbedUrl}
+                title="Lifestyle Calculator introduction video"
+                className="h-full w-full"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                allowFullScreen
+                referrerPolicy="strict-origin-when-cross-origin"
+              />
+            ) : (
+              <div className="flex h-full w-full flex-col items-center justify-center gap-4 bg-[radial-gradient(circle_at_top,rgba(51,114,178,0.28),rgba(15,23,42,0.96))] px-6 text-center text-white">
+                <div className="rounded-full border border-white/20 bg-white/10 px-4 py-2 text-xs font-black uppercase tracking-[0.24em] text-blue-100">
+                  Video Placeholder
+                </div>
+                <div className="space-y-2">
+                  <p className="text-2xl font-black sm:text-3xl">Introduction video will appear here</p>
+                  <p className="max-w-2xl text-sm font-medium leading-relaxed text-slate-200 sm:text-base">
+                    Replace <span className="font-black text-white">INTRO_VIDEO_URL</span> in <span className="font-black text-white">src/App.tsx</span> with your final YouTube share or embed link.
+                  </p>
+                </div>
               </div>
-              <div className="h-10 w-px bg-slate-100 hidden sm:block" />
-              <div className="flex flex-col">
-                <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Annual Salary Needed</span>
-                <span className="text-xl font-bold text-orange-500">${recommendedSalary.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
-              </div>
-            </div>
-            
-            <div className="flex gap-4 w-full sm:w-auto">
-              <button 
-                onClick={prevStep}
-                className="flex-1 sm:flex-none px-6 py-4 bg-slate-100 text-slate-600 rounded-2xl font-bold hover:bg-slate-200 transition-all flex items-center justify-center gap-2"
-              >
-                <ChevronLeft className="w-5 h-5" /> Back
-              </button>
-              <button 
-                onClick={nextStep}
-                disabled={!canAdvanceCurrentStep}
-                className="flex-1 sm:flex-none px-10 py-4 bg-orange-500 text-white rounded-2xl font-bold hover:bg-orange-600 transition-all shadow-lg shadow-orange-100 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-orange-500"
-              >
-                Next Step <ChevronRight className="w-5 h-5" />
-              </button>
-            </div>
+            )}
           </div>
-        </motion.footer>
-      )}
-    </div>
+        </div>
+      </ModalShell>
+
+      <div className="relative min-h-screen bg-slate-50 font-sans text-slate-900 pb-52 sm:pb-32">
+        <Nav
+          sessionEmail={session.user.email}
+          stepLabel={showHistory ? 'History' : STEPS[state.currentStep]}
+          currentQuestionStep={currentQuestionStep}
+          totalQuestionSteps={totalQuestionSteps}
+          progressPercent={progressPercent}
+          showProgress={!showHistory && state.currentStep > 0 && state.currentStep < STEPS.length - 1}
+          onReset={resetQuiz}
+          onToggleHistory={() => setShowHistory(!showHistory)}
+          onSignOut={() => supabase.auth.signOut()}
+        />
+
+        <main className="max-w-5xl mx-auto px-6 pt-8">
+          {showHistory ? (
+            <HistoryPage userId={session.user.id} />
+          ) : (
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={state.currentStep}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.3 }}
+              >
+                {renderStep()}
+              </motion.div>
+            </AnimatePresence>
+          )}
+        </main>
+
+        <FeedbackTool stepName={showHistory ? 'History' : STEPS[state.currentStep]} userId={session.user.id} />
+
+        {!showHistory && state.currentStep > 0 && state.currentStep < STEPS.length - 1 && (
+          <motion.footer 
+            initial={{ y: 100 }}
+            animate={{ y: 0 }}
+            className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100 p-6 z-50 shadow-2xl"
+          >
+            <div className="max-w-5xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-6">
+              <div className="flex items-center gap-8">
+                <div className="flex flex-col">
+                  <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Monthly Total</span>
+                  <span className="text-3xl font-black text-slate-900">${monthlyTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                </div>
+                <div className="h-10 w-px bg-slate-100 hidden sm:block" />
+                <div className="flex flex-col">
+                  <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Annual Salary Needed</span>
+                  <span className="text-xl font-bold text-orange-500">${recommendedSalary.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+                </div>
+              </div>
+              
+              <div className="flex gap-4 w-full sm:w-auto">
+                <button 
+                  onClick={prevStep}
+                  className="flex-1 sm:flex-none px-6 py-4 bg-slate-100 text-slate-600 rounded-2xl font-bold hover:bg-slate-200 transition-all flex items-center justify-center gap-2"
+                >
+                  <ChevronLeft className="w-5 h-5" /> Back
+                </button>
+                <button 
+                  onClick={nextStep}
+                  disabled={!canAdvanceCurrentStep}
+                  className="flex-1 sm:flex-none px-10 py-4 bg-orange-500 text-white rounded-2xl font-bold hover:bg-orange-600 transition-all shadow-lg shadow-orange-100 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-orange-500"
+                >
+                  Next Step <ChevronRight className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+          </motion.footer>
+        )}
+      </div>
+    </>
   );
 }
 
@@ -1940,7 +2085,17 @@ function ResultsStep({ state, monthlyTotal, annualTotal, recommendedSalary, onRe
     }
     
     state.selections.insurance.forEach((id: string) => add(insuranceOptions.find((o: any) => o.id === id), 'Insurance', m));
-    state.selections.other.forEach((id: string) => add(OTHER_OPTIONS.find(o => o.id === id), 'Other'));
+    Object.values(state.selections.other).forEach((entry: any) => {
+      const opt = OTHER_OPTIONS.find(o => o.id === entry.id);
+      if (opt) {
+        items.push({
+          name: entry.quantity > 1 ? `${opt.name} x${entry.quantity}` : opt.name,
+          cost: opt.monthlyCost * entry.quantity,
+          category: 'Other',
+          emoji: opt.emoji,
+        });
+      }
+    });
 
     return items;
   }, [state.selections, currentRegion.costMultiplier, internetOptions, utilityOptions, streamingOptions, subscriptionOptions, insuranceOptions, phoneOptions, phonePlanOptions, transportOptions]);

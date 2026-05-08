@@ -65,6 +65,19 @@ export type GroceryCartEntry = {
 
 export type GroceryCartState = Record<string, GroceryCartEntry>;
 
+export type OtherServiceEntry = {
+  id: string;
+  name: string;
+  price: number;
+  quantity: number;
+  description?: string;
+  emoji?: string;
+  category?: string;
+  type?: string;
+};
+
+export type OtherServicesState = Record<string, OtherServiceEntry>;
+
 export type QuizState = {
   currentStep: number;
   regionId: string;
@@ -83,7 +96,7 @@ export type QuizState = {
     fuelPriceEnvironment: FuelPriceEnvironment;
     clothingCloset: ClothingClosetState;
     insurance: string[];
-    other: string[];
+    other: OtherServicesState;
   };
 };
 

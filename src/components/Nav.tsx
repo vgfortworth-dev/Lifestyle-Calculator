@@ -1,5 +1,7 @@
 import { motion } from 'motion/react';
-import { Calculator, History, RotateCcw } from 'lucide-react';
+import { History, RotateCcw } from 'lucide-react';
+
+const APP_LOGO_SRC = '/images/Liestyle calculator logo_Lifestyle Calculator Logo.svg';
 
 type NavProps = {
   sessionEmail?: string;
@@ -28,11 +30,13 @@ export function Nav({
     <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-100 px-6 py-4">
       <div className="max-w-5xl mx-auto flex justify-between items-center gap-4">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-orange-500 rounded-xl flex items-center justify-center shadow-lg shadow-orange-100">
-            <Calculator className="w-6 h-6 text-white" />
-          </div>
+          <img
+            src={APP_LOGO_SRC}
+            alt="Lifestyle Calculator logo"
+            className="h-9 w-auto object-contain"
+          />
           <div className="hidden sm:flex flex-col">
-            <span className="font-black text-xl tracking-tight">Lifestyle Calculator</span>
+            <span className="text-sm font-black text-slate-900">User:</span>
             <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">{sessionEmail}</span>
           </div>
         </div>
