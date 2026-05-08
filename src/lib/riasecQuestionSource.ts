@@ -4,18 +4,14 @@ import { RiasecCategory, RiasecQuestion } from '../types/riasec';
 import { buildCloudinaryImageUrl } from './cloudinary';
 
 const RIASEC_CATEGORIES: RiasecCategory[] = ['R', 'I', 'A', 'S', 'E', 'C'];
+const RIASEC_TABLE = 'riasec_questions';
+const RIASEC_SELECT_COLUMNS = 'id,prompt,category,display_order,image_path,alt_text,is_active,cloudinary_public_id';
 
 type RiasecQuestionRow = {
   id: string | number;
   category?: string | null;
   display_order?: number | null;
-  sort_order?: number | null;
-  riasec_category?: string | null;
-  riasec_code?: string | null;
   prompt?: string | null;
-  question_text?: string | null;
-  question?: string | null;
-  text?: string | null;
   cloudinary_public_id?: string | null;
   image_path?: string | null;
   image_url?: string | null;
@@ -23,28 +19,42 @@ type RiasecQuestionRow = {
   is_active?: boolean | null;
 };
 
+type RiasecQueryError = {
+  code?: string | null;
+  message?: string | null;
+  details?: string | null;
+  hint?: string | null;
+} | null;
+
 function logRiasecQueryDiagnostic({
   table,
-  orderColumn,
   error,
   usedFallback,
+  queryVariant,
 }: {
   table: string;
-  orderColumn?: string;
-  error?: { code?: string | null; message?: string | null; details?: string | null; hint?: string | null } | null;
+  error?: RiasecQueryError;
   usedFallback: boolean;
+  queryVariant: 'display_order_with_is_active' | 'display_order_without_is_active';
 }) {
-  if (!import.meta.env.DEV) return;
-
-  console.info('[RIASEC] Supabase diagnostic', {
+  const payload = {
     table,
-    orderColumn: orderColumn || null,
+    queryVariant,
     errorCode: error?.code || null,
     errorMessage: error?.message || null,
     errorDetails: error?.details || null,
     errorHint: error?.hint || null,
     usedFallback,
-  });
+  };
+
+  if (error) {
+    console.error('[RIASEC] Supabase diagnostic', payload);
+    return;
+  }
+
+  if (import.meta.env.DEV) {
+    console.info('[RIASEC] Supabase diagnostic', payload);
+  }
 }
 
 function isRiasecCategory(value: string): value is RiasecCategory {
@@ -53,19 +63,7 @@ function isRiasecCategory(value: string): value is RiasecCategory {
 
 function normalizeCategory(value: string | null | undefined): RiasecCategory | null {
   const normalized = String(value || '').trim().toUpperCase();
-
-  if (isRiasecCategory(normalized)) return normalized;
-
-  const categoryMap: Record<string, RiasecCategory> = {
-    REALISTIC: 'R',
-    INVESTIGATIVE: 'I',
-    ARTISTIC: 'A',
-    SOCIAL: 'S',
-    ENTERPRISING: 'E',
-    CONVENTIONAL: 'C',
-  };
-
-  return categoryMap[normalized] || null;
+  return isRiasecCategory(normalized) ? normalized : null;
 }
 
 function getQuestionImageIdentifier(row: RiasecQuestionRow) {
@@ -82,10 +80,16 @@ function resolveQuestionImageUrl(row: RiasecQuestionRow) {
     });
   }
 
-  const directImageUrl = row.image_url?.trim();
-  if (directImageUrl) {
-    if (/^https?:\/\//i.test(directImageUrl)) return directImageUrl;
-    if (directImageUrl.startsWith('/')) return directImageUrl;
+  const imageUrl = row.image_url?.trim();
+  if (imageUrl) {
+    if (/^https?:\/\//i.test(imageUrl)) return imageUrl;
+    if (imageUrl.startsWith('/')) return imageUrl;
+    return buildCloudinaryImageUrl(imageUrl, {
+      width: 1400,
+      height: 1200,
+      crop: 'fill',
+      gravity: 'auto',
+    });
   }
 
   const imagePath = row.image_path?.trim();
@@ -101,16 +105,12 @@ function resolveQuestionImageUrl(row: RiasecQuestionRow) {
   });
 }
 
-function getDisplayOrder(row: RiasecQuestionRow) {
-  return row.display_order ?? row.sort_order ?? null;
-}
-
 function mapQuestionRow(row: RiasecQuestionRow): RiasecQuestion | null {
-  const category = normalizeCategory(row.category || row.riasec_category || row.riasec_code);
-  const prompt = row.prompt || row.question_text || row.question || row.text;
+  const category = normalizeCategory(row.category);
+  const prompt = row.prompt?.trim();
   const imageIdentifier = getQuestionImageIdentifier(row);
   const resolvedImageUrl = resolveQuestionImageUrl(row);
-  const displayOrder = getDisplayOrder(row);
+  const displayOrder = row.display_order ?? null;
 
   if (!category || !prompt) return null;
 
@@ -138,22 +138,42 @@ function mapQuestionRow(row: RiasecQuestionRow): RiasecQuestion | null {
   };
 }
 
+async function queryRiasecQuestions(withIsActiveFilter: boolean) {
+  let query = supabase
+    .from(RIASEC_TABLE)
+    .select(RIASEC_SELECT_COLUMNS)
+    .order('display_order', { ascending: true });
+
+  if (withIsActiveFilter) {
+    query = query.eq('is_active', true);
+  }
+
+  return query;
+}
+
 export async function loadRiasecQuestions(): Promise<{ questions: RiasecQuestion[]; source: 'supabase' | 'fallback' }> {
-  const orderColumns = ['display_order', 'sort_order'] as const;
-  const table = 'riasec_questions';
-  let lastError: { code?: string | null; message?: string | null; details?: string | null; hint?: string | null } | null = null;
+  const attempts: Array<{
+    withIsActiveFilter: boolean;
+    queryVariant: 'display_order_with_is_active' | 'display_order_without_is_active';
+  }> = [
+    { withIsActiveFilter: true, queryVariant: 'display_order_with_is_active' },
+    { withIsActiveFilter: false, queryVariant: 'display_order_without_is_active' },
+  ];
+
+  let lastError: RiasecQueryError = null;
 
   try {
-    for (const orderColumn of orderColumns) {
-      const { data, error } = await supabase
-        .from(table)
-        .select('*')
-        .eq('is_active', true)
-        .order(orderColumn, { ascending: true });
+    for (const attempt of attempts) {
+      const { data, error } = await queryRiasecQuestions(attempt.withIsActiveFilter);
 
       if (error) {
         lastError = error;
-        logRiasecQueryDiagnostic({ table, orderColumn, error, usedFallback: true });
+        logRiasecQueryDiagnostic({
+          table: RIASEC_TABLE,
+          queryVariant: attempt.queryVariant,
+          error,
+          usedFallback: true,
+        });
         continue;
       }
 
@@ -164,23 +184,29 @@ export async function loadRiasecQuestions(): Promise<{ questions: RiasecQuestion
 
       if (questions.length > 0) {
         if (import.meta.env.DEV) {
-          console.info(`[RIASEC] Loaded ${questions.length} questions from Supabase using ${orderColumn}.`);
+          console.info(`[RIASEC] Loaded ${questions.length} questions from Supabase using ${attempt.queryVariant}.`);
         }
-        logRiasecQueryDiagnostic({ table, orderColumn, usedFallback: false });
+        logRiasecQueryDiagnostic({
+          table: RIASEC_TABLE,
+          queryVariant: attempt.queryVariant,
+          usedFallback: false,
+        });
         return { questions, source: 'supabase' };
       }
     }
   } catch (error) {
-    lastError = error as { code?: string | null; message?: string | null; details?: string | null; hint?: string | null };
-    if (import.meta.env.DEV) {
-      console.error('[RIASEC] Unexpected question loading failure.', error);
-    }
-    // The local list is intentionally secondary and only used when Supabase fails or has no active rows.
+    lastError = error as RiasecQueryError;
+    console.error('[RIASEC] Unexpected question loading failure.', error);
   }
 
   if (import.meta.env.DEV) {
     console.info(`[RIASEC] Loaded ${RIASEC_QUESTIONS.length} questions from fallback.`);
   }
-  logRiasecQueryDiagnostic({ table, orderColumn: lastError ? undefined : 'display_order', error: lastError, usedFallback: true });
+  logRiasecQueryDiagnostic({
+    table: RIASEC_TABLE,
+    queryVariant: 'display_order_with_is_active',
+    error: lastError,
+    usedFallback: true,
+  });
   return { questions: RIASEC_QUESTIONS, source: 'fallback' };
 }
