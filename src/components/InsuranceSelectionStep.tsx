@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { Check, ChevronDown, Sparkles, X } from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
+import { Check, ChevronDown, X } from 'lucide-react';
 import { Option } from '../types';
 import { AppColorTokens, MultiSelectStepProps } from '../types/componentProps';
 import {
@@ -14,10 +13,11 @@ import {
   getInsuranceWhy,
 } from '../content/insuranceInfo';
 import { InfoButton } from './InfoButton';
+import { CategoryEmoji } from './StableEmoji';
 
 type InsuranceSelectionStepProps = MultiSelectStepProps<'insurance'> & {
   colors: AppColorTokens;
-  categoryIcons: Record<string, LucideIcon>;
+  categoryEmojis: Record<string, string>;
 };
 
 type InsuranceInfoModalProps = {
@@ -32,7 +32,7 @@ export function InsuranceSelectionStep({
   onToggle,
   multiplier = 1,
   colors,
-  categoryIcons,
+  categoryEmojis,
 }: InsuranceSelectionStepProps) {
   const selectedIds = state.selections[category];
   const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
@@ -79,7 +79,7 @@ export function InsuranceSelectionStep({
 
       <div className="space-y-6">
         {orderedGroups.map(([catName, opts]) => {
-          const CategoryIcon = categoryIcons[catName] || Sparkles;
+          const categoryIconName = categoryEmojis[catName] ? catName : 'General';
 
           return (
             <div key={catName} className="space-y-3">
@@ -91,7 +91,7 @@ export function InsuranceSelectionStep({
                   <ChevronDown className="h-5 w-5 group-hover:text-slate-700" style={{ color: colors.headerBlue }} />
                 </div>
                 <h3 className="flex items-center gap-3 text-xl font-black uppercase tracking-wider" style={{ color: colors.headerBlue }}>
-                  <CategoryIcon className="h-6 w-6" aria-hidden="true" />
+                  <CategoryEmoji name={categoryIconName} className="text-2xl leading-none" />
                   {catName}
                   <span className="rounded-full bg-slate-100 px-2 py-0.5 text-sm font-bold text-slate-500">{opts.length}</span>
                 </h3>
@@ -146,7 +146,7 @@ export function InsuranceSelectionStep({
                                 {INSURANCE_PRIORITY_BADGES[priority]}
                               </span>
                             )}
-                            <CategoryIcon className="mb-3 h-10 w-10 text-[#3372B2]" aria-hidden="true" />
+                            <CategoryEmoji name={categoryIconName} className="mb-3 text-4xl leading-none" />
                             <p className="mb-1 font-bold" style={{ color: colors.headerBlue }}>{opt.name}</p>
                             <p className="mb-3 text-sm font-medium" style={{ color: colors.valueTeal }}>{opt.description}</p>
                             <p className="mb-3 rounded-2xl bg-slate-50 px-4 py-3 text-left text-xs font-medium leading-relaxed text-slate-600">

@@ -11,12 +11,9 @@ import {
   MapPin, Home, ShieldCheck, ChevronRight, ChevronLeft, ChevronDown,
   RotateCcw, Info, CheckCircle2,
   Save, Loader2, Check, Sparkles,
-  Camera, MessageSquare, X, ShoppingBag, Gamepad2, Music, Tv, Newspaper, Bot,
-  Briefcase, Cloud, Shield, Dumbbell, Heart, Car, HeartPulse, Smile, Eye, Wifi,
-  Router, ShoppingCart, Shirt, Circle,
+  Camera, MessageSquare, X, ShoppingCart, Shirt,
   PieChart as PieChartIcon 
 } from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
 
 import {
   REGIONS,
@@ -64,6 +61,7 @@ import { OtherServicesStep } from './components/OtherServicesStep';
 import { PhonePlanSelectionStep } from './components/PhonePlanSelectionStep';
 import { PhoneSelectionStep } from './components/PhoneSelectionStep';
 import { QuizWrapper } from './components/QuizWrapper';
+import { CategoryEmoji, CATEGORY_EMOJIS, USAGE_BADGE_EMOJIS } from './components/StableEmoji';
 import { StreamingSelectionStep } from './components/StreamingSelectionStep';
 import { SubscriptionInfoModal } from './components/SubscriptionInfoModal';
 import { TransportationGridStep, getTransportationOption } from './components/TransportationGridStep';
@@ -100,32 +98,6 @@ const INITIAL_STATE: QuizState = {
     insurance: [],
     other: {},
   },
-};
-
-const CATEGORY_ICONS: Record<string, LucideIcon> = {
-  'Shopping': ShoppingBag,
-  'Gaming': Gamepad2,
-  'Music': Music,
-  'Entertainment': Tv,
-  'News & Books': Newspaper,
-  'AI & Tech': Bot,
-  'Productivity': Briefcase,
-  'Cloud Storage': Cloud,
-  'Security': Shield,
-  'Fitness': Dumbbell,
-  'Wellness': Heart,
-  'Auto Care': Car,
-  'Auto': Car,
-  'Home': Home,
-  'Health': HeartPulse,
-  'Dental': Smile,
-  'Vision': Eye,
-  'Life': ShieldCheck,
-  'Utilities': Wifi,
-  'Personal Vehicles': Car,
-  'Electric Vehicles': Car,
-  'Cycling': Car,
-  'General': Sparkles,
 };
 
 const COLORS = {
@@ -218,17 +190,6 @@ const USAGE_BADGE_STYLES: Record<string, string> = {
   'Moderate Driving': 'bg-amber-50 text-amber-700 border-amber-200',
   'Heavy Driving': 'bg-red-50 text-red-700 border-red-200',
 };
-
-function getCategoryIcon(name: string) {
-  return CATEGORY_ICONS[name] || Sparkles;
-}
-
-function CategoryIcon({ name, className = 'h-5 w-5' }: { name: string; className?: string }) {
-  const Icon = getCategoryIcon(name);
-  return <Icon className={className} aria-hidden="true" />;
-}
-
-const USAGE_BADGE_ICONS: Record<string, string> = {};
 
 const EXTRA_CLOUD_STORAGE_OPTIONS = SUBSCRIPTION_OPTIONS.filter(option =>
   ['onedrive-100gb', 'googleone-2tb', 'box-personal-pro'].includes(option.id)
@@ -909,7 +870,7 @@ export default function App() {
               state={state}
               onSelect={handleSelection}
               usageBadgeStyles={USAGE_BADGE_STYLES}
-              usageBadgeIcons={USAGE_BADGE_ICONS}
+              usageBadgeIcons={USAGE_BADGE_EMOJIS}
             />
           </QuizWrapper>
         );
@@ -992,7 +953,7 @@ export default function App() {
               getFuelPriceEnvironment={getFuelPriceEnvironment}
               getFuelMonthlyCost={getFuelMonthlyCost}
               usageBadgeStyles={USAGE_BADGE_STYLES}
-              usageBadgeIcons={USAGE_BADGE_ICONS}
+              usageBadgeIcons={USAGE_BADGE_EMOJIS}
               headerBlue={COLORS.headerBlue}
             />
           </QuizWrapper>
@@ -1030,7 +991,7 @@ export default function App() {
               onToggle={toggleMultiSelection}
               multiplier={currentRegion.costMultiplier}
               colors={COLORS}
-              categoryIcons={CATEGORY_ICONS}
+              categoryEmojis={CATEGORY_EMOJIS}
             />
           </QuizWrapper>
         );
@@ -1456,7 +1417,7 @@ function MultiSelectionStep({ options, category, state, onToggle, multiplier = 1
                   <ChevronDown className="w-5 h-5 group-hover:text-slate-700" style={{ color: COLORS.headerBlue }} />
                 </div>
                 <h3 className="text-xl font-black uppercase tracking-wider flex items-center gap-3" style={{ color: COLORS.headerBlue }}>
-                  <CategoryIcon name={catName} className="h-6 w-6" />
+                  <CategoryEmoji name={catName} className="text-2xl leading-none" />
                   {catName}
                   <span className="text-sm font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">{(opts as any[]).length}</span>
                 </h3>
@@ -2242,7 +2203,7 @@ function ResultsStep({ state, monthlyTotal, annualTotal, recommendedSalary, onRe
                     <div key={`${item.category}-${item.name}-${i}`} className="flex justify-between items-center py-3 border-b border-slate-50 last:border-0">
                       <div className="flex items-center gap-4">
                         <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-50">
-                          {item.emoji ? <span className="text-2xl">{item.emoji}</span> : <CategoryIcon name={item.category} className="h-5 w-5 text-slate-500" />}
+                          {item.emoji ? <span className="text-2xl">{item.emoji}</span> : <CategoryEmoji name={item.category} className="text-lg leading-none" />}
                         </span>
                         <div className="flex flex-col">
                           <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">{item.category}</span>
@@ -2265,7 +2226,7 @@ function ResultsStep({ state, monthlyTotal, annualTotal, recommendedSalary, onRe
                     >
                       <div className="flex items-center gap-4">
                         <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-white">
-                          {row.emoji ? <span className="text-2xl">{row.emoji}</span> : <CategoryIcon name={row.category} className="h-5 w-5 text-slate-500" />}
+                          {row.emoji ? <span className="text-2xl">{row.emoji}</span> : <CategoryEmoji name={row.category} className="text-lg leading-none" />}
                         </span>
                         <div className="flex flex-col">
                           <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">{row.category}</span>

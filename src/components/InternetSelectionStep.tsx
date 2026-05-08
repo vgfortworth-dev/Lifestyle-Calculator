@@ -1,10 +1,11 @@
 import { useMemo, useState } from 'react';
-import { Check, Circle, Router, Wifi } from 'lucide-react';
+import { Check, Wifi } from 'lucide-react';
 import { BeforeYouChooseCallout } from './BeforeYouChooseCallout';
 import { LessonAccordion, LessonAccordionItem } from './LessonAccordion';
 import { ModalShell } from './ModalShell';
 import { SingleSelectStepProps } from '../types/componentProps';
 import { EnhancedInternetOption, InternetPlanDetails } from '../types/options';
+import { StableEmoji, UsageBadgeEmoji } from './StableEmoji';
 
 type InternetSelectionStepProps = SingleSelectStepProps<'internet'> & {
   usageBadgeStyles: Record<string, string>;
@@ -141,17 +142,6 @@ export function InternetSelectionStep({
     ...(internetPlanDetails[opt.id] || {}),
   })), [options]);
 
-  const renderUsageIcon = (label?: string) => {
-    const iconClassName =
-      label === 'Light Use'
-        ? 'h-3.5 w-3.5 fill-emerald-500 text-emerald-500'
-        : label === 'Moderate Use'
-        ? 'h-3.5 w-3.5 fill-amber-500 text-amber-500'
-        : 'h-3.5 w-3.5 fill-red-500 text-red-500';
-
-    return <Circle className={iconClassName} aria-hidden="true" />;
-  };
-
   return (
     <div className="space-y-8">
       <BeforeYouChooseCallout
@@ -161,7 +151,7 @@ export function InternetSelectionStep({
         onLessonClick={() => setShowLesson(true)}
       />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
         {enhancedOptions.map((opt) => {
           const isSelected = selectedId === opt.id;
           const usageLabel = opt.usageLabel;
@@ -171,35 +161,38 @@ export function InternetSelectionStep({
             <button
               key={opt.id}
               onClick={() => onSelect(category, opt.id)}
-              className={`relative flex flex-col items-center text-center p-6 transition-all border-2 rounded-3xl group ${
+              className={`relative flex flex-col items-center rounded-3xl border-2 p-6 text-center transition-all group ${
                 isSelected
                   ? 'border-[#10B981] ring-2 ring-emerald-50 bg-emerald-50/10'
-                  : 'border-slate-100 hover:border-slate-200 bg-white'
+                  : 'border-slate-100 bg-white hover:border-slate-200'
               }`}
             >
               {opt.image && (
-                <div className="h-32 w-full flex items-center justify-center mb-4">
+                <div className="mb-4 flex h-32 w-full items-center justify-center">
                   <img
                     src={opt.image}
                     alt={opt.name}
-                    className="max-h-full object-contain rounded-xl"
+                    className="max-h-full rounded-xl object-contain"
                     referrerPolicy="no-referrer"
                   />
                 </div>
               )}
-              <div className="text-[#3372B2] font-black text-2xl mb-2">
-                <Router className="mr-2 inline h-6 w-6" aria-hidden="true" />
+              <div className="mb-2 text-2xl font-black text-[#3372B2]">
+                <StableEmoji
+                  symbol={usageBadgeIcons.Utilities || '\u{1F4F6}'}
+                  className="mr-2 inline-block text-2xl leading-none align-[-0.15em]"
+                />
                 ${(opt.monthlyCost * multiplier).toLocaleString()}/mo
               </div>
               {usageLabel && (
                 <div className={`mb-3 inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-black ${usageBadgeStyles[usageLabel] || 'bg-slate-50 text-slate-600 border-slate-200'}`}>
-                  {renderUsageIcon(usageLabel)}
+                  <UsageBadgeEmoji label={usageLabel} className="text-sm leading-none" />
                   {usageLabel}
                 </div>
               )}
               <div className="space-y-1">
-                <p className="text-[#3372B2] font-bold text-lg">{opt.name}</p>
-                <p className="text-[#2D9B8E] text-sm font-medium">{opt.description}</p>
+                <p className="text-lg font-bold text-[#3372B2]">{opt.name}</p>
+                <p className="text-sm font-medium text-[#2D9B8E]">{opt.description}</p>
               </div>
               {bestFor && (
                 <div className="mt-5 w-full rounded-2xl bg-slate-50 p-4 text-left">
@@ -215,8 +208,8 @@ export function InternetSelectionStep({
                 </div>
               )}
               {isSelected && (
-                <div className="absolute -top-3 -right-3 w-8 h-8 bg-[#10B981] border-4 border-white text-white rounded-full flex items-center justify-center shadow-md">
-                  <Check className="w-4 h-4 stroke-[4px]" />
+                <div className="absolute -right-3 -top-3 flex h-8 w-8 items-center justify-center rounded-full border-4 border-white bg-[#10B981] text-white shadow-md">
+                  <Check className="h-4 w-4 stroke-[4px]" />
                 </div>
               )}
             </button>

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Car, Check, Circle, Info } from 'lucide-react';
+import { Car, Check, Info } from 'lucide-react';
 import { BeforeYouChooseCallout } from './BeforeYouChooseCallout';
 import { LessonAccordion, LessonAccordionItem } from './LessonAccordion';
 import { ModalShell } from './ModalShell';
@@ -7,6 +7,7 @@ import { FUEL_LESSON_CONTENT } from '../content/fuelLessons';
 import { FuelPriceEnvironment, Option, QuizState } from '../types';
 import { SelectionChangeHandler } from '../types/componentProps';
 import { FuelPlanType, FuelPriceEnvironmentOption } from '../types/options';
+import { StableEmoji, UsageBadgeEmoji } from './StableEmoji';
 
 type FuelPlanSelectionStepProps = {
   state: QuizState;
@@ -35,6 +36,7 @@ export function FuelPlanSelectionStep({
   usageBadgeIcons,
   headerBlue,
 }: FuelPlanSelectionStepProps) {
+  void usageBadgeIcons;
   const [showLesson, setShowLesson] = useState(false);
   const selectedId = state.selections.fuel;
   const selectedEnvironment = getFuelPriceEnvironment(fuelPriceEnvironment);
@@ -43,17 +45,6 @@ export function FuelPlanSelectionStep({
   const intro = fuelPlanType === 'ev'
     ? 'EV charging is usually cheaper than gas, but it still belongs in your monthly budget.'
     : 'Gas costs change based on how far and how often you drive.';
-
-  const renderUsageIcon = (label?: string) => {
-    const iconClassName =
-      label === 'Light Driving'
-        ? 'h-3.5 w-3.5 fill-emerald-500 text-emerald-500'
-        : label === 'Moderate Driving'
-        ? 'h-3.5 w-3.5 fill-amber-500 text-amber-500'
-        : 'h-3.5 w-3.5 fill-red-500 text-red-500';
-
-    return <Circle className={iconClassName} aria-hidden="true" />;
-  };
 
   const handleSelect = (id: string) => {
     onSelect('fuel', id);
@@ -73,7 +64,7 @@ export function FuelPlanSelectionStep({
           onLessonClick={() => setShowLesson(true)}
         />
         <div className="rounded-3xl border border-emerald-100 bg-emerald-50 p-8 text-center">
-          <p className="text-4xl mb-3">✨</p>
+          <StableEmoji symbol="\u2728" className="mb-3 block text-4xl leading-none" />
           <h3 className="text-2xl font-black text-emerald-700">No Fuel Plan Needed</h3>
           <p className="mt-2 text-sm font-medium leading-relaxed text-emerald-900/80">
             Your current transportation choice does not need a monthly gas or EV charging plan.
@@ -155,7 +146,7 @@ export function FuelPlanSelectionStep({
             >
               <div className="text-4xl mb-3">{opt.emoji}</div>
               <div className={`mb-3 inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-black ${usageBadgeStyles[usageLabel] || 'bg-slate-50 text-slate-600 border-slate-200'}`}>
-                {renderUsageIcon(usageLabel)}
+                <UsageBadgeEmoji label={usageLabel} className="text-sm leading-none" />
                 {usageLabel}
               </div>
               <p className="text-[#3372B2] font-bold text-lg">{opt.name}</p>
