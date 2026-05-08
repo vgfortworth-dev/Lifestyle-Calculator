@@ -5,13 +5,12 @@
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import html2canvas from 'html2canvas';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 import { 
   MapPin, Home, ShieldCheck, ChevronRight, ChevronLeft, ChevronDown,
   RotateCcw, Info, CheckCircle2,
   Save, Loader2, Check, Sparkles,
-  Camera, MessageSquare, X, ShoppingCart, Shirt,
+  MessageSquare, X, ShoppingCart, Shirt,
   PieChart as PieChartIcon 
 } from 'lucide-react';
 
@@ -112,6 +111,7 @@ const USE_SUPABASE = true;
 const APP_LOGO_SRC = '/images/Liestyle calculator logo_Lifestyle Calculator Logo.svg';
 const INTRO_VIDEO_URL = 'https://www.youtube.com/watch?v=ACzi_o4b7o8';
 const INTRO_VIDEO_STORAGE_KEY = 'lifestyleIntroVideoSeen';
+const DEFAULT_JOTFORM_FEEDBACK_URL = 'https://t3.jotform.com/261275078019055';
 
 function getIntroVideoEmbedUrl(url: string) {
   const trimmedUrl = url.trim();
@@ -1122,7 +1122,7 @@ export default function App() {
           )}
         </main>
 
-        <FeedbackTool stepName={showHistory ? 'History' : safeSteps[state.currentStep]} userId={session.user.id} />
+        <FeedbackTool stepName={showHistory ? 'History' : safeSteps[state.currentStep]} />
 
         {!showHistory && state.currentStep > 0 && state.currentStep < safeSteps.length - 1 && (
           <motion.footer 
@@ -1614,287 +1614,43 @@ function PilotAuthGate() {
   );
 }
 
-function FeedbackTool({ stepName, userId }: { stepName: string, userId: string }) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [note, setNote] = useState('');
-  const [isCapturing, setIsCapturing] = useState(false);
-  const [isDrawingMode, setIsDrawingMode] = useState(false);
-  const [rawScreenshot, setRawScreenshot] = useState<string | null>(null);
-  const [screenshot, setScreenshot] = useState<string | null>(null);
+function buildJotformFeedbackUrl(stepName: string) {
+  const baseUrl = import.meta.env.VITE_JOTFORM_FEEDBACK_URL || DEFAULT_JOTFORM_FEEDBACK_URL;
 
-  const takeScreenshot = async () => {
-    setIsCapturing(true);
+  try {
+    const url = new URL(baseUrl);
+    const params = new URLSearchParams(url.search);
 
-    try {
-      const canvas = await html2canvas(document.body, {
-        backgroundColor: '#f8fafc',
-        useCORS: true,
-        scale: 2,
-        foreignObjectRendering: true,
-        ignoreElements: (element) => element.id === 'feedback-tool'
-      });
-      setRawScreenshot(canvas.toDataURL('image/png'));
-      setIsDrawingMode(true);
-    } catch (error) {
-      console.error('Screenshot capture failed:', error);
-      alert('Screenshot capture is not available on this page right now. You can still submit written feedback.');
-    } finally {
-      setIsCapturing(false);
-    }
-  };
+    params.set('currentStep', stepName || 'Unknown');
+    params.set('currentUrl', window.location.href);
+    params.set('browserInfo', navigator.userAgent);
+    params.set('screenSize', `${window.innerWidth}x${window.innerHeight}`);
 
-  const handleSubmit = async () => {
-    const trimmedNote = note.trim();
-    if (!trimmedNote && !screenshot) {
-      alert('Add a note or screenshot before submitting feedback.');
-      return;
-    }
-
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
-
-    if (userError || !user) {
-      alert('You need to be signed in to submit feedback.');
-      return;
-    }
-
-    let final_screenshot_url = null;
-
-    if (screenshot) {
-      try {
-        const response = await fetch(screenshot);
-        const blob = await response.blob();
-        const fileName = `${user.id}/${Date.now()}.png`;
-
-        const { error: uploadError } = await supabase.storage
-          .from('feedback_screenshots')
-          .upload(fileName, blob, {
-            contentType: 'image/png',
-            upsert: true
-          });
-
-        if (uploadError) {
-          console.error('Storage Upload Error:', uploadError);
-          alert(`Storage Error: ${uploadError.message}`);
-          return;
-        }
-
-        const { data: urlData } = supabase.storage
-          .from('feedback_screenshots')
-          .getPublicUrl(fileName);
-
-        final_screenshot_url = urlData.publicUrl;
-      } catch (err) {
-        console.error('System Error:', err);
-        alert('Something went wrong preparing the image.');
-        return;
-      }
-    }
-
-    const payload = {
-      user_id: user.id,
-      step_name: stepName,
-      note: trimmedNote,
-      ...(final_screenshot_url ? { screenshot_url: final_screenshot_url } : {}),
-    };
-
-    const { error: dbError } = await supabase.from('pilot_feedback').insert([payload]);
-
-    if (dbError) {
-      console.error('Database Error:', dbError);
-      if (dbError.code === '42501') {
-        alert('Feedback permissions are not set up yet in Supabase. Apply the pilot_feedback insert policy and try again.');
-      } else {
-        alert(`Database Error: ${dbError.message}`);
-      }
-    } else {
-      alert('Feedback submitted! Thank you.');
-      setNote('');
-      setScreenshot(null);
-      setRawScreenshot(null);
-      setIsOpen(false);
-    }
-  };
-
-  return (
-    <>
-      <div id="feedback-tool" className="fixed right-6 top-1/2 -translate-y-1/2 z-[200]">
-        {!isOpen ? (
-          <button
-            onClick={() => setIsOpen(true)}
-            className="bg-slate-900 text-white p-4 rounded-full shadow-2xl hover:bg-orange-500 transition-all flex flex-col items-center gap-1"
-          >
-            <MessageSquare className="w-6 h-6" />
-            <span className="text-[10px] font-bold uppercase">Feedback</span>
-          </button>
-        ) : (
-          <div className="bg-white w-80 rounded-3xl shadow-2xl border border-slate-100 p-6 space-y-4">
-            <div className="flex justify-between items-center">
-              <h3 className="font-bold">Pilot Feedback</h3>
-              <button onClick={() => setIsOpen(false)}><X className="w-5 h-5 text-slate-400" /></button>
-            </div>
-
-            <p className="text-xs text-slate-400 uppercase font-bold">Page: {stepName}</p>
-
-            <textarea
-              placeholder="Write your notes here..."
-              className="w-full h-32 p-3 bg-slate-50 border border-slate-100 rounded-xl text-sm"
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-            />
-
-            {screenshot ? (
-              <div className="relative rounded-xl overflow-hidden border border-slate-200">
-                <img src={screenshot} alt="Preview" className="w-full" />
-                <button onClick={() => setScreenshot(null)} className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full"><X className="w-3 h-3" /></button>
-                <p className="text-[10px] text-center bg-slate-100 py-1">Screenshot annotated and ready to send</p>
-              </div>
-            ) : (
-              <button
-                onClick={takeScreenshot}
-                disabled={isCapturing}
-                className="w-full py-3 bg-blue-50 text-blue-600 rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-blue-100 disabled:opacity-60"
-              >
-                <Camera className="w-4 h-4" /> {isCapturing ? 'Capturing...' : 'Take Screenshot'}
-              </button>
-            )}
-
-            <button
-              disabled={!note && !screenshot}
-              onClick={handleSubmit}
-              className="w-full py-4 bg-orange-500 text-white rounded-xl font-bold shadow-lg hover:bg-orange-600 disabled:opacity-50"
-            >
-              Submit Feedback
-            </button>
-          </div>
-        )}
-      </div>
-
-      <AnimatePresence>
-        {isDrawingMode && rawScreenshot && (
-          <DrawingCanvas
-            imageSrc={rawScreenshot}
-            onSave={(finalImage) => {
-              setScreenshot(finalImage);
-              setRawScreenshot(null);
-              setIsDrawingMode(false);
-            }}
-            onCancel={() => {
-              setIsDrawingMode(false);
-              setRawScreenshot(null);
-            }}
-          />
-        )}
-      </AnimatePresence>
-    </>
-  );
+    url.search = params.toString();
+    return url.toString();
+  } catch (error) {
+    console.error('Invalid Jotform feedback URL configuration:', error);
+    return baseUrl;
+  }
 }
 
-function DrawingCanvas({ imageSrc, onSave, onCancel }: { imageSrc: string, onSave: (dataUrl: string) => void, onCancel: () => void }) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [isDrawing, setIsDrawing] = useState(false);
-  const [color, setColor] = useState('#ef4444');
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    const img = new Image();
-    img.src = imageSrc;
-    img.onload = () => {
-      canvas.width = img.width;
-      canvas.height = img.height;
-      ctx.drawImage(img, 0, 0);
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
-      ctx.lineWidth = 8;
-    };
-  }, [imageSrc]);
-
-  const getCanvasPoint = (event: React.MouseEvent | React.TouchEvent, canvas: HTMLCanvasElement) => {
-    const rect = canvas.getBoundingClientRect();
-    const clientX = 'touches' in event ? event.touches[0].clientX : event.clientX;
-    const clientY = 'touches' in event ? event.touches[0].clientY : event.clientY;
-    const scaleX = canvas.width / rect.width;
-    const scaleY = canvas.height / rect.height;
-
-    return {
-      x: (clientX - rect.left) * scaleX,
-      y: (clientY - rect.top) * scaleY
-    };
-  };
-
-  const startDrawing = (event: React.MouseEvent | React.TouchEvent) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    const { x, y } = getCanvasPoint(event, canvas);
-    ctx.beginPath();
-    ctx.moveTo(x, y);
-    ctx.strokeStyle = color;
-    setIsDrawing(true);
-  };
-
-  const draw = (event: React.MouseEvent | React.TouchEvent) => {
-    if (!isDrawing) return;
-
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    const { x, y } = getCanvasPoint(event, canvas);
-    ctx.lineTo(x, y);
-    ctx.stroke();
-  };
-
-  const stopDrawing = () => {
-    setIsDrawing(false);
-  };
-
-  const handleSave = () => {
-    if (canvasRef.current) {
-      onSave(canvasRef.current.toDataURL('image/png'));
-    }
+function FeedbackTool({ stepName }: { stepName: string }) {
+  const openFeedbackForm = () => {
+    const feedbackUrl = buildJotformFeedbackUrl(stepName);
+    window.open(feedbackUrl, '_blank', 'noopener,noreferrer');
   };
 
   return (
-    <div className="fixed inset-0 z-[300] bg-black/90 flex flex-col p-6 items-center justify-center">
-      <div className="w-full max-w-5xl flex justify-between items-center mb-4 text-white">
-        <div className="flex gap-4">
-          <button onClick={() => setColor('#ef4444')} className={`w-8 h-8 rounded-full bg-red-500 border-2 ${color === '#ef4444' ? 'border-white' : 'border-transparent'}`} />
-          <button onClick={() => setColor('#fbbf24')} className={`w-8 h-8 rounded-full bg-yellow-400 border-2 ${color === '#fbbf24' ? 'border-white' : 'border-transparent'}`} />
-          <button onClick={() => setColor('#3b82f6')} className={`w-8 h-8 rounded-full bg-blue-500 border-2 ${color === '#3b82f6' ? 'border-white' : 'border-transparent'}`} />
-        </div>
-        <div className="flex gap-3">
-          <button onClick={onCancel} className="px-6 py-2 bg-slate-800 rounded-xl font-bold">Cancel</button>
-          <button onClick={handleSave} className="px-6 py-2 bg-orange-500 rounded-xl font-bold">Done Drawing</button>
-        </div>
-      </div>
-
-      <div className="relative bg-white rounded-xl overflow-hidden shadow-2xl cursor-crosshair">
-        <canvas
-          ref={canvasRef}
-          onMouseDown={startDrawing}
-          onMouseMove={draw}
-          onMouseUp={stopDrawing}
-          onMouseLeave={stopDrawing}
-          onTouchStart={startDrawing}
-          onTouchMove={draw}
-          onTouchEnd={stopDrawing}
-          className="max-w-full max-h-[70vh] block"
-        />
-      </div>
-      <p className="text-slate-400 mt-4 text-sm">Draw anywhere on the screenshot to highlight your feedback!</p>
+    <div id="feedback-tool" className="fixed right-6 top-1/2 z-[200] -translate-y-1/2">
+      <button
+        onClick={openFeedbackForm}
+        className="flex flex-col items-center gap-1 rounded-full bg-slate-900 p-4 text-white shadow-2xl transition-all hover:bg-orange-500"
+        aria-label={`Open anonymous feedback form for ${stepName}`}
+        title="Open anonymous feedback form"
+      >
+        <MessageSquare className="h-6 w-6" />
+        <span className="text-[10px] font-bold uppercase">Feedback</span>
+      </button>
     </div>
   );
 }
