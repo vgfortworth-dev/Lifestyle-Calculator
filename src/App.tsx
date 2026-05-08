@@ -112,6 +112,32 @@ const APP_LOGO_SRC = '/images/Liestyle calculator logo_Lifestyle Calculator Logo
 const INTRO_VIDEO_URL = 'https://www.youtube.com/watch?v=ACzi_o4b7o8';
 const INTRO_VIDEO_STORAGE_KEY = 'lifestyleIntroVideoSeen';
 const DEFAULT_JOTFORM_FEEDBACK_URL = 'https://t3.jotform.com/261275078019055';
+const FEEDBACK_STEP_LABELS: Record<string, string> = {
+  Welcome: 'Welcome / Home Page',
+  RiasecSetup: 'RIASEC Career Quiz',
+  RiasecQuiz: 'RIASEC Career Quiz',
+  Region: 'Where Will You Live?',
+  Housing: 'Choose Your New Home',
+  Phone: 'Choose Your Phone',
+  PhonePlan: 'Choose Your Phone Plan',
+  Internet: 'Choose Your Internet Plan',
+  Utilities: 'Choose Your Utilities',
+  Streaming: 'Choose Your Streaming Plans',
+  Subscriptions: 'More Subscriptions',
+  Food: 'Food & Groceries',
+  Transportation: 'Choose Your Transportation',
+  Fuel: 'Choose Your Fuel Plan',
+  Clothing: 'Build Your Closet',
+  'Insurance Info': 'All About Insurance',
+  Insurance: 'Choose Your Insurance',
+  Other: 'Other Services',
+  Results: 'Your Future Awaits / Results',
+  History: 'History',
+};
+
+function getFeedbackStepLabel(stepName: string) {
+  return FEEDBACK_STEP_LABELS[stepName] || stepName || 'Unknown';
+}
 
 function getIntroVideoEmbedUrl(url: string) {
   const trimmedUrl = url.trim();
@@ -1616,12 +1642,13 @@ function PilotAuthGate() {
 
 function buildJotformFeedbackUrl(stepName: string) {
   const baseUrl = import.meta.env.VITE_JOTFORM_FEEDBACK_URL || DEFAULT_JOTFORM_FEEDBACK_URL;
+  const feedbackStepLabel = getFeedbackStepLabel(stepName);
 
   try {
     const url = new URL(baseUrl);
     const params = new URLSearchParams(url.search);
 
-    params.set('currentStep', stepName || 'Unknown');
+    params.set('currentStep', feedbackStepLabel);
     params.set('currentUrl', window.location.href);
     params.set('browserInfo', navigator.userAgent);
     params.set('screenSize', `${window.innerWidth}x${window.innerHeight}`);
