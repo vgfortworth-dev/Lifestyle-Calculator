@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   FerrisWheel,
   Music4,
@@ -8,8 +8,14 @@ import {
   Trophy,
   Minus,
   Plus,
+  ShoppingCart,
+  X,
 } from 'lucide-react';
-import { OTHER_SERVICES_CATEGORIES, OtherServicesCategoryId } from '../data/otherServices';
+import {
+  OTHER_SERVICES_CATEGORIES,
+  OtherServicesCategoryId,
+  OtherServicesOffer,
+} from '../data/otherServices';
 import { QuizState } from '../types';
 
 type OtherServicesStepProps = {
@@ -18,6 +24,13 @@ type OtherServicesStepProps = {
 };
 
 function formatCurrency(value: number) {
+  return value.toLocaleString(undefined, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
+function formatDisplayPrice(value: number) {
   return value.toLocaleString(undefined, {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
@@ -28,60 +41,121 @@ function QuantityControls({
   quantity,
   onDecrement,
   onIncrement,
+  tone = 'default',
+  label = 'Quantity',
 }: {
   quantity: number;
   onDecrement: () => void;
   onIncrement: () => void;
+  tone?: 'default' | 'selected';
+  label?: string;
 }) {
+  const isSelected = tone === 'selected';
+
   return (
-    <div className="flex items-center justify-between rounded-full border border-emerald-200 bg-white px-3 py-2">
-      <button
-        type="button"
-        onClick={onDecrement}
-        className="flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 transition-all hover:border-[#10B981] hover:bg-emerald-50 hover:text-emerald-700"
-        aria-label="Decrease quantity"
-      >
-        <Minus className="h-4 w-4" />
-      </button>
-      <div className="min-w-[36px] text-center text-lg font-black text-[#10B981]">{quantity}</div>
-      <button
-        type="button"
-        onClick={onIncrement}
-        className="flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 transition-all hover:border-[#10B981] hover:bg-emerald-50 hover:text-emerald-700"
-        aria-label="Increase quantity"
-      >
-        <Plus className="h-4 w-4" />
-      </button>
+    <div
+      className={`flex items-center justify-between rounded-2xl border px-3 py-3 ${
+        isSelected ? 'border-emerald-100 bg-emerald-50' : 'border-slate-100 bg-slate-50'
+      }`}
+    >
+      <p className={`text-xs font-black uppercase tracking-widest ${isSelected ? 'text-emerald-700' : 'text-slate-500'}`}>
+        {label}
+      </p>
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={onDecrement}
+          className={`flex h-10 w-10 items-center justify-center rounded-full border bg-white transition-all ${
+            isSelected
+              ? 'border-emerald-200 text-emerald-700 hover:bg-emerald-100'
+              : 'border-slate-200 text-slate-600 hover:border-[#10B981] hover:bg-emerald-50 hover:text-emerald-700'
+          }`}
+        >
+          <Minus className="h-4 w-4" />
+        </button>
+        <div className={`min-w-[44px] text-center text-lg font-black ${isSelected ? 'text-[#10B981]' : 'text-slate-900'}`}>
+          {quantity}
+        </div>
+        <button
+          type="button"
+          onClick={onIncrement}
+          className={`flex h-10 w-10 items-center justify-center rounded-full border bg-white transition-all ${
+            isSelected
+              ? 'border-emerald-200 text-emerald-700 hover:bg-emerald-100'
+              : 'border-slate-200 text-slate-600 hover:border-[#10B981] hover:bg-emerald-50 hover:text-emerald-700'
+          }`}
+        >
+          <Plus className="h-4 w-4" />
+        </button>
+      </div>
     </div>
   );
 }
 
 export function OtherServicesStep({ state, onChange }: OtherServicesStepProps) {
   const [activeCategory, setActiveCategory] = useState<OtherServicesCategoryId>('college-athletics');
+  const [isCartOpen, setIsCartOpen] = useState(false);
+  const [lastChangedItemId, setLastChangedItemId] = useState<string | null>(null);
   const otherSelections = state.selections.other;
 
   const activeCategoryData = useMemo(
     () => OTHER_SERVICES_CATEGORIES.find((category) => category.id === activeCategory) ?? OTHER_SERVICES_CATEGORIES[0],
     [activeCategory]
   );
+
+  const activeOffers = useMemo(
+    () =>
+      activeCategoryData.cards.flatMap((card) =>
+        card.options.map((option) => ({
+          ...option,
+          cardId: card.id,
+          cardTitle: card.title,
+          cardIcon: card.icon,
+          priceHint: card.priceHint,
+          categoryLabel: activeCategoryData.label,
+        }))
+      ),
+    [activeCategoryData]
+  );
+
   const selectedItems = useMemo(
     () => Object.values(otherSelections).filter((entry) => entry.quantity > 0),
     [otherSelections]
   );
+
   const totalSelectedCount = useMemo(
     () => selectedItems.reduce((sum, entry) => sum + entry.quantity, 0),
     [selectedItems]
   );
+
   const totalSelectedMonthlyCost = useMemo(
     () => selectedItems.reduce((sum, entry) => sum + entry.price * entry.quantity, 0),
     [selectedItems]
   );
 
-  const updateOptionQuantity = (option: { id: string; name: string; description: string; price: number; emoji?: string }, cardTitle: string, categoryLabel: string, delta: number) => {
+  useEffect(() => {
+    if (!lastChangedItemId) return;
+
+    const timeoutId = window.setTimeout(() => {
+      setLastChangedItemId(null);
+    }, 700);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [lastChangedItemId]);
+
+  const updateOptionQuantity = (
+    option: OtherServicesOffer,
+    cardTitle: string,
+    categoryLabel: string,
+    cardIcon: string | undefined,
+    delta: number
+  ) => {
     const existing = otherSelections[option.id];
     const nextQuantity = Math.max(0, (existing?.quantity || 0) + delta);
+    setLastChangedItemId(option.id);
 
     if (nextQuantity === 0) {
+      if (!existing) return;
       const { [option.id]: _removed, ...rest } = otherSelections;
       onChange(rest);
       return;
@@ -95,86 +169,98 @@ export function OtherServicesStep({ state, onChange }: OtherServicesStepProps) {
         price: Number((option.price / 12).toFixed(2)),
         quantity: nextQuantity,
         description: option.description,
-        emoji: option.emoji ?? cardTitle,
+        emoji: option.emoji ?? cardIcon ?? cardTitle,
         category: categoryLabel,
         type: cardTitle,
       },
     });
   };
 
+  const updateSummaryItemQuantity = (itemId: string, delta: number) => {
+    const source = OTHER_SERVICES_CATEGORIES.flatMap((category) =>
+      category.cards.flatMap((card) =>
+        card.options.map((option) => ({
+          option,
+          cardTitle: card.title,
+          cardIcon: card.icon,
+          categoryLabel: category.label,
+        }))
+      )
+    ).find((entry) => entry.option.id === itemId);
+
+    if (!source) return;
+
+    updateOptionQuantity(source.option, source.cardTitle, source.categoryLabel, source.cardIcon, delta);
+  };
+
   return (
     <div className="space-y-6">
-      <section className="rounded-[32px] border border-blue-100 bg-[linear-gradient(135deg,rgba(243,247,251,0.98),rgba(232,240,250,0.96))] p-6 shadow-sm sm:p-8">
-        <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
-          <div className="max-w-2xl space-y-4">
-            <div className="inline-flex items-center gap-2 rounded-full border border-white/80 bg-white/80 px-3 py-1.5 text-xs font-black uppercase tracking-[0.24em] text-[#3372B2] shadow-sm">
-              <Sparkles className="h-3.5 w-3.5" />
-              Fun & Events
-            </div>
+      <div className="rounded-3xl border border-blue-100 bg-blue-50/70 p-6 shadow-sm">
+        <div className="flex items-start gap-4">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white text-[#3372B2] shadow-sm">
+            <Sparkles className="h-6 w-6" />
+          </div>
+          <div className="space-y-3">
             <div>
-              <h3 className="text-xl font-black uppercase tracking-tight text-slate-900 sm:text-2xl">FUN & EVENTS</h3>
-              <p className="mt-3 max-w-2xl text-base font-medium leading-relaxed text-slate-600 sm:text-lg">
-                The little things that add up. Choose how often you go out, have fun, and experience life each year.
-              </p>
-              <p className="mt-2 text-sm font-bold text-[#3372B2]">
-                Tip: Think about how many events you realistically attend in a year.
+              <h3 className="text-2xl font-black text-slate-900">Other Services</h3>
+              <p className="mt-1 text-sm font-bold text-[#3372B2]">
+                Shop for fun, events, and memberships the same way you built your grocery cart and closet.
               </p>
             </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            {[
-              { icon: Ticket, label: 'Tickets' },
-              { icon: Music4, label: 'Concerts' },
-              { icon: FerrisWheel, label: 'Amusement' },
-              { icon: Trophy, label: 'Sports' },
-            ].map(({ icon: Icon, label }) => (
-              <div
-                key={label}
-                className="flex min-h-[88px] min-w-[88px] flex-col items-center justify-center rounded-3xl border border-white/80 bg-white/85 px-4 py-4 text-center shadow-sm"
-              >
-                <Icon className="h-6 w-6 text-[#3372B2]" />
-                <span className="mt-2 text-[10px] font-black uppercase tracking-[0.14em] text-slate-500 sm:text-[11px]">
-                  {label}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="rounded-[32px] border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
-        <div className="space-y-4">
-          <div>
-            <p className="text-xs font-black uppercase tracking-widest text-slate-400">BROWSE CATEGORIES</p>
-            <h4 className="mt-1 text-lg font-extrabold text-slate-900 sm:text-xl">Which events will you go to each year?</h4>
-            <p className="mt-2 text-sm font-medium text-slate-500">
-              Add one for each person, membership, or package you want to include.
+            <p className="text-sm font-medium leading-relaxed text-slate-600">
+              Browse events, add them to your cart, adjust quantities, and review how annual or one-time picks turn into a monthly budget.
             </p>
           </div>
+        </div>
+      </div>
 
-          <div className="-mx-1 overflow-x-auto pb-1">
-            <div className="flex min-w-max gap-3 px-1">
-              {OTHER_SERVICES_CATEGORIES.map((category) => {
-                const isActive = category.id === activeCategory;
-                return (
-                  <button
-                    key={category.id}
-                    type="button"
-                    onClick={() => setActiveCategory(category.id)}
-                    className={`rounded-full border px-4 py-2 text-sm font-black transition-all ${
-                      isActive
-                        ? 'border-[#4FD1C5] bg-emerald-50 text-emerald-700 shadow-sm'
-                        : 'border-slate-200 bg-white text-slate-700 hover:border-[#D6E4F0] hover:bg-[#F3F7FB]'
-                    }`}
-                    aria-pressed={isActive}
-                  >
-                    {category.label}
-                  </button>
-                );
-              })}
+      <section className="overflow-hidden rounded-3xl border border-slate-100 bg-white p-6 shadow-sm">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div className="min-w-0 flex-1 space-y-3">
+            <div>
+              <p className="text-xs font-black uppercase tracking-widest text-slate-400">Browse Other Services</p>
+              <h4 className="text-xl font-black text-slate-900">Build a realistic fun and events cart</h4>
+              <p className="mt-2 text-sm font-medium text-slate-500">
+                Add one for each person, ticket, pass, or membership you want in your lifestyle budget.
+              </p>
+            </div>
+            <div className="-mx-1 overflow-x-auto pb-1 lg:overflow-visible">
+              <div className="flex min-w-max gap-3 px-1 lg:min-w-0 lg:flex-wrap">
+                {OTHER_SERVICES_CATEGORIES.map((category) => {
+                  const isActive = category.id === activeCategory;
+                  return (
+                    <button
+                      key={category.id}
+                      type="button"
+                      onClick={() => setActiveCategory(category.id)}
+                      className={`rounded-full border px-4 py-2 text-sm font-black transition-all ${
+                        isActive
+                          ? 'border-[#10B981] bg-emerald-50 text-emerald-700 shadow-sm'
+                          : 'border-slate-200 bg-white text-slate-600 hover:border-[#D6E4F0] hover:bg-[#F3F7FB]'
+                      }`}
+                    >
+                      {category.label}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
+
+          <button
+            type="button"
+            onClick={() => setIsCartOpen(true)}
+            className="inline-flex w-full shrink-0 items-center justify-center gap-2 self-start rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-black text-slate-700 shadow-sm transition-all hover:border-[#D6E4F0] hover:bg-[#F3F7FB] sm:w-auto"
+            aria-label="Open other services cart"
+          >
+            <ShoppingCart className="h-5 w-5" />
+            Cart
+            {totalSelectedCount > 0 && (
+              <span className="flex h-6 min-w-[24px] items-center justify-center rounded-full bg-orange-500 px-1.5 text-xs font-black text-white">
+                {totalSelectedCount}
+              </span>
+            )}
+          </button>
         </div>
 
         {activeCategoryData.heroImage && (
@@ -190,142 +276,300 @@ export function OtherServicesStep({ state, onChange }: OtherServicesStepProps) {
           </div>
         )}
 
-        <div className={`mt-6 grid grid-cols-1 gap-5 ${activeCategory === 'other-events' ? 'xl:grid-cols-3 lg:grid-cols-3 md:grid-cols-2' : 'xl:grid-cols-3 md:grid-cols-2'}`}>
-          {activeCategoryData.cards.map((card) => (
-            <article
-              key={card.id}
-              className="rounded-[28px] border border-[#89E0D4] bg-[linear-gradient(180deg,#ffffff_0%,#f8fffe_100%)] p-4 shadow-[0_8px_24px_rgba(15,23,42,0.04)]"
-            >
-              <div className="flex min-h-[72px] flex-col items-center justify-center text-center">
-                <div className="text-4xl leading-none">{card.icon}</div>
-                <h5 className="mt-3 text-base font-black uppercase leading-tight tracking-tight text-[#129886] sm:text-lg">
-                  {card.title}
-                </h5>
-                {card.priceHint && (
-                  <p className="mt-1 text-sm font-black uppercase tracking-[0.3em] text-emerald-500">{card.priceHint}</p>
-                )}
-              </div>
+        <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {activeOffers.map((offer) => {
+            const quantity = otherSelections[offer.id]?.quantity || 0;
+            const isInCart = quantity > 0;
+            const monthlyCost = Number((offer.price / 12).toFixed(2));
 
-              <div className="mt-4 space-y-3">
-                {card.options.map((option) => {
-                  const quantity = otherSelections[option.id]?.quantity || 0;
-                  const isSelected = quantity > 0;
+            return (
+              <div
+                key={offer.id}
+                className={`relative flex h-full min-w-0 flex-col rounded-3xl border-2 bg-white p-4 text-left transition-all ${
+                  isInCart
+                    ? 'border-[#10B981] bg-emerald-50/20 ring-2 ring-emerald-50 shadow-[0_4px_16px_rgba(16,185,129,0.12)]'
+                    : 'border-slate-100 hover:border-[#D6E4F0] hover:bg-[#F3F7FB] hover:shadow-[0_2px_6px_rgba(0,0,0,0.05)]'
+                } ${lastChangedItemId === offer.id ? 'scale-[1.01]' : ''}`}
+              >
+                <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="rounded-full bg-white px-3 py-1 text-[11px] font-black uppercase tracking-wide text-slate-500 shadow-sm">
+                      {offer.categoryLabel}
+                    </span>
+                    <span className="rounded-full bg-blue-100 px-3 py-1 text-[11px] font-black uppercase tracking-wide text-[#3372B2]">
+                      {offer.cardTitle}
+                    </span>
+                    {offer.priceHint && (
+                      <span className="rounded-full bg-orange-100 px-3 py-1 text-[11px] font-black uppercase tracking-wide text-orange-700">
+                        {offer.priceHint}
+                      </span>
+                    )}
+                  </div>
+                  <div className="mt-4 space-y-1">
+                    <h5 className="text-lg font-black text-slate-900">{offer.name}</h5>
+                    <p className="text-sm font-medium leading-relaxed text-slate-500">{offer.description}</p>
+                  </div>
+                </div>
 
-                  return (
-                    <div
-                      key={option.id}
-                      className={`rounded-3xl border bg-slate-50/90 p-4 transition-all ${
-                        isSelected ? 'border-[#10B981] bg-emerald-50/70 shadow-sm' : 'border-[#D6E4F0]'
-                      }`}
-                    >
-                      <div className="space-y-1">
-                        <p className="text-sm font-bold text-slate-900 sm:text-base">{option.name}</p>
-                        <p className="text-xs font-medium leading-relaxed text-slate-500">{option.description}</p>
-                        <p className="pt-1 text-4xl font-black text-[#3372B2]">${formatCurrency(option.price)}</p>
-                      </div>
-
-                      <div className="mt-4">
-                        {quantity === 0 ? (
-                          <button
-                            type="button"
-                            onClick={() => updateOptionQuantity(option, card.title, activeCategoryData.label, 1)}
-                            className="flex w-full items-center justify-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-black text-slate-800 transition-all hover:border-[#10B981] hover:bg-emerald-50 hover:text-emerald-700"
-                            aria-label={`Add ${card.title} ${option.name}`}
-                          >
-                            Add to cart
-                          </button>
-                        ) : (
-                          <QuantityControls
-                            quantity={quantity}
-                            onDecrement={() => updateOptionQuantity(option, card.title, activeCategoryData.label, -1)}
-                            onIncrement={() => updateOptionQuantity(option, card.title, activeCategoryData.label, 1)}
-                          />
-                        )}
-                      </div>
+                <div className="mt-4 flex flex-1 flex-col justify-between gap-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-xs font-black uppercase tracking-widest text-slate-400">Event or annual price</p>
+                      <p className="mt-1 text-3xl font-black text-[#3372B2]">${formatDisplayPrice(offer.price)}</p>
+                      <p className="mt-1 text-xs font-bold uppercase tracking-widest text-slate-400">
+                        about ${formatCurrency(monthlyCost)}/mo
+                      </p>
                     </div>
-                  );
-                })}
+                    {isInCart && (
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#10B981] text-white shadow-md">
+                        <Check className="h-4 w-4" />
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="mt-auto min-w-0">
+                    {quantity === 0 ? (
+                      <button
+                        type="button"
+                        onClick={() => updateOptionQuantity(offer, offer.cardTitle, offer.categoryLabel, offer.cardIcon, 1)}
+                        className="flex w-full items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-black uppercase tracking-widest text-slate-600 transition-all hover:border-[#10B981] hover:bg-emerald-50 hover:text-emerald-700"
+                        aria-label={`Add ${offer.name} to cart`}
+                      >
+                        Add to Cart
+                      </button>
+                    ) : (
+                      <QuantityControls
+                        quantity={quantity}
+                        onDecrement={() => updateOptionQuantity(offer, offer.cardTitle, offer.categoryLabel, offer.cardIcon, -1)}
+                        onIncrement={() => updateOptionQuantity(offer, offer.cardTitle, offer.categoryLabel, offer.cardIcon, 1)}
+                        tone="selected"
+                        label="In Cart"
+                      />
+                    )}
+                  </div>
+                </div>
               </div>
-            </article>
-          ))}
+            );
+          })}
         </div>
 
-        <div className="mt-6 rounded-[28px] border border-slate-100 bg-slate-50 p-5 shadow-sm">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-            <div>
-              <p className="text-xs font-black uppercase tracking-widest text-slate-400">Checkout Summary</p>
-              <h5 className="mt-1 text-lg font-black text-slate-900">Your Fun & Events Picks</h5>
-              <p className="mt-2 text-sm font-medium text-slate-500">
-                This updates live so students can see what they have added on this step.
-              </p>
+        {activeOffers.length === 0 && (
+          <div className="mt-6 rounded-2xl border border-dashed border-slate-200 px-4 py-10 text-center text-sm font-medium text-slate-400">
+            No other services are available in this category yet.
+          </div>
+        )}
+      </section>
+
+      <section className="rounded-3xl border border-slate-100 bg-slate-50 p-5 shadow-sm">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <p className="text-xs font-black uppercase tracking-widest text-slate-400">Cart Snapshot</p>
+            <h5 className="mt-1 text-lg font-black text-slate-900">Checkout Summary</h5>
+            <p className="mt-2 text-sm font-medium text-slate-500">
+              This updates live so students can see how event choices add up before they open the full cart review.
+            </p>
+          </div>
+          <div className="grid grid-cols-2 gap-3 sm:w-auto">
+            <div className="rounded-2xl bg-white px-4 py-3 shadow-sm">
+              <p className="text-xs font-black uppercase tracking-widest text-slate-400">Items Added</p>
+              <p className="mt-1 text-2xl font-black text-slate-900">{totalSelectedCount}</p>
             </div>
-            <div className="grid grid-cols-2 gap-3 sm:w-auto">
-              <div className="rounded-2xl bg-white px-4 py-3 shadow-sm">
-                <p className="text-xs font-black uppercase tracking-widest text-slate-400">Items Added</p>
-                <p className="mt-1 text-2xl font-black text-slate-900">{totalSelectedCount}</p>
-              </div>
-              <div className="rounded-2xl bg-white px-4 py-3 shadow-sm">
-                <p className="text-xs font-black uppercase tracking-widest text-slate-400">Monthly Total</p>
-                <p className="mt-1 text-2xl font-black text-[#3372B2]">${formatCurrency(totalSelectedMonthlyCost)}</p>
-              </div>
+            <div className="rounded-2xl bg-white px-4 py-3 shadow-sm">
+              <p className="text-xs font-black uppercase tracking-widest text-slate-400">Monthly Total</p>
+              <p className="mt-1 text-2xl font-black text-[#3372B2]">${formatCurrency(totalSelectedMonthlyCost)}</p>
             </div>
           </div>
+        </div>
 
-          <div className="mt-4">
-            {selectedItems.length === 0 ? (
-              <div className="rounded-3xl border border-dashed border-slate-200 bg-white px-4 py-8 text-center text-sm font-medium text-slate-400">
-                No events added yet.
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {selectedItems.map((entry) => (
-                  <div
-                    key={entry.id}
-                    className="rounded-3xl border border-slate-100 bg-white px-4 py-4 shadow-sm"
-                  >
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                      <div className="min-w-0 space-y-2">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="rounded-full bg-slate-100 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-slate-500">
-                            {entry.category}
-                          </span>
-                          {entry.type && (
-                            <span className="rounded-full bg-emerald-50 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-emerald-700">
-                              {entry.type}
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-sm font-black text-slate-900 sm:text-base">{entry.name}</p>
-                        <p className="text-sm font-medium text-slate-500">
-                          Quantity: {entry.quantity}
-                        </p>
-                      </div>
-                      <div className="flex items-center justify-between gap-4 sm:min-w-[160px] sm:justify-end">
-                        <span className="rounded-full bg-blue-50 px-3 py-1 text-sm font-black text-[#3372B2]">
-                          x{entry.quantity}
+        <div className="mt-4">
+          {selectedItems.length === 0 ? (
+            <div className="rounded-3xl border border-dashed border-slate-200 bg-white px-4 py-8 text-center text-sm font-medium text-slate-400">
+              No events or services added yet.
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {selectedItems.map((entry) => (
+                <div key={entry.id} className="rounded-3xl border border-slate-100 bg-white px-4 py-4 shadow-sm">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="min-w-0 space-y-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="rounded-full bg-slate-100 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-slate-500">
+                          {entry.category}
                         </span>
-                        <div className="text-right">
-                          <p className="text-base font-black text-[#3372B2]">${formatCurrency(entry.price * entry.quantity)}</p>
-                          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">monthly</p>
-                        </div>
+                        {entry.type && (
+                          <span className="rounded-full bg-emerald-50 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-emerald-700">
+                            {entry.type}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-sm font-black text-slate-900 sm:text-base">{entry.name}</p>
+                      <p className="text-sm font-medium text-slate-500">
+                        ${formatCurrency(entry.price)} each month x {entry.quantity}
+                      </p>
+                    </div>
+                    <div className="flex items-center justify-between gap-4 sm:min-w-[180px] sm:justify-end">
+                      <span className="rounded-full bg-blue-50 px-3 py-1 text-sm font-black text-[#3372B2]">
+                        x{entry.quantity}
+                      </span>
+                      <div className="text-right">
+                        <p className="text-base font-black text-[#3372B2]">${formatCurrency(entry.price * entry.quantity)}</p>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">monthly</p>
                       </div>
                     </div>
                   </div>
-                ))}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
+
+      {isCartOpen && (
+        <div className="fixed inset-0 z-[260] bg-slate-900/55 backdrop-blur-sm">
+          <div className="absolute inset-0 overflow-y-auto p-4 sm:p-6">
+            <div className="mx-auto max-w-5xl">
+              <div className="overflow-hidden rounded-3xl border border-slate-100 bg-white shadow-2xl">
+                <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-6 py-5">
+                  <div>
+                    <p className="text-xs font-black uppercase tracking-widest text-slate-400">Cart Review</p>
+                    <h4 className="mt-1 text-2xl font-black text-slate-900">Checkout Other Services</h4>
+                    <p className="mt-2 text-sm font-medium text-slate-500">
+                      Review what you added, update quantities, and see how your fun and event choices contribute to your monthly budget.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsCartOpen(false)}
+                    className="rounded-full border border-slate-200 p-2 text-slate-500 transition-all hover:bg-slate-100"
+                    aria-label="Close other services cart"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 gap-6 p-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+                  <section className="space-y-4">
+                    {selectedItems.length === 0 ? (
+                      <div className="rounded-3xl border border-dashed border-slate-200 px-6 py-12 text-center">
+                        <ShoppingCart className="mx-auto h-10 w-10 text-slate-300" />
+                        <p className="mt-4 text-lg font-black text-slate-700">Your cart is empty</p>
+                        <p className="mt-2 text-sm font-medium text-slate-500">
+                          Add a few events or services, then come back here to review this part of your lifestyle budget.
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => setIsCartOpen(false)}
+                          className="mt-5 rounded-2xl bg-orange-500 px-5 py-3 text-sm font-black text-white transition-all hover:bg-orange-600"
+                        >
+                          Continue Shopping
+                        </button>
+                      </div>
+                    ) : (
+                      selectedItems.map((item) => (
+                        <div key={item.id} className="rounded-3xl border border-slate-100 bg-white p-4 shadow-sm">
+                          <div className="space-y-3">
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0">
+                                <p className="text-lg font-black text-slate-900">{item.name}</p>
+                                <div className="mt-2 flex flex-wrap items-center gap-2">
+                                  <span className="rounded-full bg-slate-100 px-3 py-1 text-[11px] font-black uppercase tracking-wide text-slate-600">
+                                    {item.category}
+                                  </span>
+                                  {item.type && (
+                                    <span className="rounded-full bg-blue-50 px-3 py-1 text-[11px] font-black uppercase tracking-wide text-[#3372B2]">
+                                      {item.type}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="shrink-0 text-right">
+                                <p className="text-lg font-black text-[#3372B2]">${formatCurrency(item.price * item.quantity)}</p>
+                                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">monthly total</p>
+                              </div>
+                            </div>
+                            {item.description && (
+                              <p className="text-sm font-medium leading-relaxed text-slate-500">{item.description}</p>
+                            )}
+                            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                              <p className="text-xs font-bold uppercase tracking-widest text-slate-400">
+                                ${formatCurrency(item.price)} per month each
+                              </p>
+                              <div className="sm:min-w-[220px]">
+                                <QuantityControls
+                                  quantity={item.quantity}
+                                  onDecrement={() => updateSummaryItemQuantity(item.id, -1)}
+                                  onIncrement={() => updateSummaryItemQuantity(item.id, 1)}
+                                  label="In Cart"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </section>
+
+                  <aside className="space-y-4">
+                    <div className="rounded-3xl border border-blue-100 bg-blue-50/70 p-5 shadow-sm">
+                      <p className="text-xs font-black uppercase tracking-widest text-blue-600">Budget Snapshot</p>
+                      <h5 className="mt-2 text-xl font-black text-slate-900">Other Services Totals</h5>
+
+                      <div className="mt-4 space-y-3">
+                        <div className="rounded-2xl bg-white px-4 py-4 shadow-sm">
+                          <p className="text-sm font-medium text-slate-500">Items Added</p>
+                          <p className="mt-1 text-3xl font-black text-slate-900">{totalSelectedCount}</p>
+                        </div>
+
+                        <div className="rounded-2xl bg-white px-4 py-4 shadow-sm">
+                          <p className="text-sm font-medium text-slate-500">Estimated monthly total</p>
+                          <p className="mt-1 text-3xl font-black text-slate-900">
+                            ${formatCurrency(totalSelectedMonthlyCost)}
+                            <span className="ml-1 text-sm font-bold uppercase tracking-widest text-slate-400">/mo</span>
+                          </p>
+                        </div>
+                      </div>
+
+                      <p className="mt-4 rounded-2xl bg-white px-4 py-3 text-sm font-medium leading-relaxed text-slate-600 shadow-sm">
+                        These picks already flow into the calculator total as monthly amounts based on the displayed event or annual price.
+                      </p>
+                    </div>
+
+                    <div className="rounded-3xl border border-orange-100 bg-orange-50 p-5 shadow-sm">
+                      <p className="text-xs font-black uppercase tracking-widest text-orange-600">What To Notice</p>
+                      <p className="mt-2 text-sm font-medium leading-relaxed text-slate-600">
+                        Small entertainment choices can stack up fast when you add multiple memberships, tickets, or yearly events.
+                      </p>
+                    </div>
+
+                    <div className="rounded-3xl border border-slate-100 bg-white p-5 shadow-sm">
+                      <p className="text-xs font-black uppercase tracking-widest text-slate-400">Next Move</p>
+                      <div className="mt-3 flex flex-col gap-3">
+                        <button
+                          type="button"
+                          onClick={() => setIsCartOpen(false)}
+                          className="rounded-2xl bg-orange-500 px-5 py-3 text-sm font-black text-white transition-all hover:bg-orange-600"
+                        >
+                          Continue Shopping
+                        </button>
+                        <p className="text-sm font-medium text-slate-500">
+                          Your other services budget is already updating live while you shop.
+                        </p>
+                      </div>
+                    </div>
+                  </aside>
+                </div>
               </div>
-            )}
+            </div>
           </div>
         </div>
+      )}
 
-        <div className="mt-6 rounded-3xl border border-slate-100 bg-slate-50 px-5 py-4">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm font-medium text-slate-600">
-              Selections here still flow into the calculator total as monthly amounts based on the displayed annual or event price.
-            </p>
-            <p className="text-sm font-black text-[#3372B2]">
-              {totalSelectedCount} selected
-            </p>
-          </div>
+      <section className="rounded-3xl border border-slate-100 bg-slate-50 px-5 py-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm font-medium text-slate-600">
+            Keep this step realistic by adding only the events, packages, and memberships you would actually pay for during the year.
+          </p>
+          <p className="text-sm font-black text-[#3372B2]">{totalSelectedCount} selected</p>
         </div>
       </section>
     </div>
