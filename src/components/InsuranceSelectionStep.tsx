@@ -13,7 +13,7 @@ import {
   getInsuranceWhy,
 } from '../content/insuranceInfo';
 import { InfoButton } from './InfoButton';
-import { CategoryEmoji } from './StableEmoji';
+import { CategoryEmoji, StableEmoji } from './StableEmoji';
 
 type InsuranceSelectionStepProps = MultiSelectStepProps<'insurance'> & {
   colors: AppColorTokens;
@@ -24,6 +24,34 @@ type InsuranceInfoModalProps = {
   option: Option | null;
   onClose: () => void;
 };
+
+const INSURANCE_CARD_EMOJIS: Record<string, string> = {
+  'auto-statefarm': '\u{1F3D8}\uFE0F',
+  'auto-geico': '\u{1F98E}',
+  'auto-progressive': '\u{1F4F1}',
+  'auto-allstate': '\u{1F6E1}\uFE0F',
+  'auto-farmbureau': '\u{1F33E}',
+  'auto-usaa': '\u{1F1FA}\u{1F1F8}',
+  'home-statefarm': '\u{1F3D8}\uFE0F',
+  'home-lemonade': '\u{1F34B}',
+  'home-progressive': '\u{1F4CB}',
+  'home-allstate': '\u{1F3E1}',
+  'home-farmbureau': '\u{1F33E}',
+  'home-usaa': '\u{1F1FA}\u{1F1F8}',
+  'health-basic': '\u{1FA79}',
+  'health-standard': '\u{1FA7A}',
+  'health-premium': '\u{1F3E5}',
+  'dental-low': '\u{1FAA5}',
+  'dental-high': '\u2728',
+  'vision-low': '\u{1F441}\uFE0F',
+  'vision-high': '\u{1F50D}',
+  'life-basic': '\u{1F331}',
+  'life-standard': '\u{1F468}\u200D\u{1F469}\u200D\u{1F467}',
+};
+
+function getInsuranceCardEmoji(option: Option) {
+  return INSURANCE_CARD_EMOJIS[option.id.toLowerCase()] || '\u2728';
+}
 
 export function InsuranceSelectionStep({
   options,
@@ -114,6 +142,7 @@ export function InsuranceSelectionStep({
                         const matchesPriority = priority ? priorities.includes(priority) : false;
                         const isDimmed = !!priority && !matchesPriority;
                         const whyThisFits = getInsuranceWhy(opt);
+                        const cardEmoji = getInsuranceCardEmoji(opt);
 
                         return (
                           <div
@@ -146,7 +175,7 @@ export function InsuranceSelectionStep({
                                 {INSURANCE_PRIORITY_BADGES[priority]}
                               </span>
                             )}
-                            <CategoryEmoji name={categoryIconName} className="mb-3 text-4xl leading-none" />
+                            <StableEmoji symbol={cardEmoji} className="mb-3 text-4xl leading-none" />
                             <p className="mb-1 font-bold" style={{ color: colors.headerBlue }}>{opt.name}</p>
                             <p className="mb-3 text-sm font-medium" style={{ color: colors.valueTeal }}>{opt.description}</p>
                             <p className="mb-3 rounded-2xl bg-slate-50 px-4 py-3 text-left text-xs font-medium leading-relaxed text-slate-600">
