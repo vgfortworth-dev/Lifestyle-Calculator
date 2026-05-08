@@ -14,7 +14,8 @@ import {
   Camera, MessageSquare, History, X,
   PieChart as PieChartIcon 
 } from 'lucide-react';
-import { REGIONS, HOUSING_OPTIONS, PHONE_OPTIONS, PHONE_SUB_OPTIONS, PHONE_PLAN_OPTIONS, INTERNET_OPTIONS, UTILITY_OPTIONS, STREAMING_OPTIONS, SUBSCRIPTION_OPTIONS, FOOD_OPTIONS, FOOD_STORE_COMPARISONS, TRANSPORT_OPTIONS, CLOTHING_OPTIONS, INSURANCE_OPTIONS, OTHER_OPTIONS } from './data/texasData';
+import { REGIONS, HOUSING_OPTIONS, PHONE_OPTIONS, PHONE_SUB_OPTIONS, PHONE_PLAN_OPTIONS, INTERNET_OPTIONS, UTILITY_OPTIONS, STREAMING_OPTIONS, SUBSCRIPTION_OPTIONS, FOOD_OPTIONS, FOOD_STORE_COMPARISONS, TRANSPORT_OPTIONS, INSURANCE_OPTIONS, OTHER_OPTIONS } from './data/texasData';
+import { CLOTHING_OPTIONS } from './data/clothingItems';
 import { QuizState, STEPS, Option, FuelPriceEnvironment } from './types';
 import { supabase } from './lib/supabase';
 import { getCareerSuggestions, CareerSuggestion } from './services/gemini';

@@ -1,3 +1,5 @@
+import { Option } from '../types';
+
 export type ClothingGameItem = {
   id: string;
   name: string;
@@ -55,3 +57,12 @@ export const CLOTHING_GAME_ITEMS: ClothingGameItem[] = [
   { id: 'acc-hair', name: 'Hair Accessories', category: 'accessories', description: 'Small extras like clips, ties, or headbands.', price: 12, lifespan_months: 12, image_url: 'https://images.unsplash.com/photo-1529139574466-a303027c1d8b?auto=format&fit=crop&q=80&w=900', sort_order: 57, is_active: true },
   { id: 'acc-sunglasses', name: 'Sunglasses', category: 'accessories', description: 'Useful for sunny days and a polished everyday look.', price: 26, lifespan_months: 18, image_url: 'https://images.unsplash.com/photo-1511499767150-a48a237f0083?auto=format&fit=crop&q=80&w=900', sort_order: 58, is_active: true },
 ];
+
+export const CLOTHING_OPTIONS: Option[] = CLOTHING_GAME_ITEMS.map((item) => ({
+  id: item.id,
+  name: item.name,
+  category: item.category,
+  description: item.description,
+  monthlyCost: Number((item.price / item.lifespan_months).toFixed(2)),
+  image: item.image_url,
+}));
