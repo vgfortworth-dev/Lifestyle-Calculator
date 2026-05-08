@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { Check, ChevronDown, X } from 'lucide-react';
+import { Check, ChevronDown, Sparkles, X } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { Option } from '../types';
 import { AppColorTokens, MultiSelectStepProps } from '../types/componentProps';
 import {
@@ -16,7 +17,7 @@ import { InfoButton } from './InfoButton';
 
 type InsuranceSelectionStepProps = MultiSelectStepProps<'insurance'> & {
   colors: AppColorTokens;
-  categoryEmojis: Record<string, string>;
+  categoryIcons: Record<string, LucideIcon>;
 };
 
 type InsuranceInfoModalProps = {
@@ -31,12 +32,13 @@ export function InsuranceSelectionStep({
   onToggle,
   multiplier = 1,
   colors,
-  categoryEmojis,
+  categoryIcons,
 }: InsuranceSelectionStepProps) {
   const selectedIds = state.selections[category];
   const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
   const [priority, setPriority] = useState<InsurancePriority | null>(null);
   const [activeInfoOption, setActiveInfoOption] = useState<Option | null>(null);
+
   const groups = useMemo<Record<string, Option[]>>(() => {
     const grouped: Record<string, Option[]> = {};
     options.forEach((opt) => {
@@ -46,6 +48,7 @@ export function InsuranceSelectionStep({
     });
     return grouped;
   }, [options]);
+
   const orderedGroups = INSURANCE_CATEGORY_ORDER
     .filter((groupName) => groups[groupName]?.length)
     .map((groupName) => [groupName, groups[groupName]] as const);
@@ -61,7 +64,7 @@ export function InsuranceSelectionStep({
           {INSURANCE_PROMPT_OPTIONS.map((option) => (
             <button
               key={option}
-              onClick={() => setPriority(current => current === option ? null : option)}
+              onClick={() => setPriority((current) => (current === option ? null : option))}
               className={`rounded-xl border px-4 py-3 text-sm font-black transition-all ${
                 priority === option
                   ? 'border-[#10B981] bg-emerald-50 text-emerald-700 shadow-sm'
@@ -75,111 +78,115 @@ export function InsuranceSelectionStep({
       </div>
 
       <div className="space-y-6">
-        {orderedGroups.map(([catName, opts]) => (
-          <div key={catName} className="space-y-3">
-            <button
-              onClick={() => setExpandedCategories(prev => ({ ...prev, [catName]: !prev[catName] }))}
-              className="flex items-center gap-2 w-full text-left group"
-            >
-              <div className={`transition-transform duration-200 ${expandedCategories[catName] ? 'rotate-0' : '-rotate-90'}`}>
-                <ChevronDown className="w-5 h-5 group-hover:text-slate-700" style={{ color: colors.headerBlue }} />
-              </div>
-              <h3 className="text-xl font-black uppercase tracking-wider flex items-center gap-3" style={{ color: colors.headerBlue }}>
-                <span className="text-2xl">{categoryEmojis[catName] || '✨'}</span>
-                {catName}
-                <span className="text-sm font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">{opts.length}</span>
-              </h3>
-              <div className="flex-1 h-px bg-slate-100" />
-            </button>
+        {orderedGroups.map(([catName, opts]) => {
+          const CategoryIcon = categoryIcons[catName] || Sparkles;
 
-            <AnimatePresence>
-              {expandedCategories[catName] && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: 'auto', opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  transition={{ duration: 0.2 }}
-                  className="overflow-hidden"
-                >
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {opts.map((opt) => {
-                      const isSelected = selectedIds.includes(opt.id);
-                      const priorities = getInsurancePriorities(opt);
-                      const matchesPriority = priority ? priorities.includes(priority) : false;
-                      const isDimmed = !!priority && !matchesPriority;
-                      const whyThisFits = getInsuranceWhy(opt);
+          return (
+            <div key={catName} className="space-y-3">
+              <button
+                onClick={() => setExpandedCategories((prev) => ({ ...prev, [catName]: !prev[catName] }))}
+                className="flex w-full items-center gap-2 text-left group"
+              >
+                <div className={`transition-transform duration-200 ${expandedCategories[catName] ? 'rotate-0' : '-rotate-90'}`}>
+                  <ChevronDown className="h-5 w-5 group-hover:text-slate-700" style={{ color: colors.headerBlue }} />
+                </div>
+                <h3 className="flex items-center gap-3 text-xl font-black uppercase tracking-wider" style={{ color: colors.headerBlue }}>
+                  <CategoryIcon className="h-6 w-6" aria-hidden="true" />
+                  {catName}
+                  <span className="rounded-full bg-slate-100 px-2 py-0.5 text-sm font-bold text-slate-500">{opts.length}</span>
+                </h3>
+                <div className="h-px flex-1 bg-slate-100" />
+              </button>
 
-                      return (
-                        <div
-                          key={opt.id}
-                          role="button"
-                          tabIndex={0}
-                          onClick={() => onToggle(category, opt.id)}
-                          onKeyDown={(event) => {
-                            if (event.key === 'Enter' || event.key === ' ') {
-                              event.preventDefault();
-                              onToggle(category, opt.id);
-                            }
-                          }}
-                          className={`relative p-6 rounded-3xl border-2 transition-all flex flex-col items-center text-center group bg-white ${
-                            isSelected
-                              ? 'border-[#10B981] bg-emerald-50/10 ring-2 ring-emerald-50'
-                              : matchesPriority
-                              ? 'border-[#3372B2] bg-blue-50/40 shadow-[0_2px_6px_rgba(0,0,0,0.05)]'
-                              : isDimmed
-                              ? 'border-slate-100 opacity-60 hover:opacity-100 hover:border-[#D6E4F0] hover:bg-[#F3F7FB]'
-                              : 'border-slate-100 hover:border-[#D6E4F0] hover:bg-[#F3F7FB] hover:shadow-[0_2px_6px_rgba(0,0,0,0.05)]'
-                          }`}
-                        >
-                          <InfoButton
-                            label={`Learn more about ${opt.name}`}
-                            onClick={() => setActiveInfoOption(opt)}
-                          />
-                          {matchesPriority && priority && (
-                            <span className="mb-3 rounded-full border border-blue-100 bg-white px-3 py-1 text-[10px] font-black uppercase tracking-widest text-[#3372B2] shadow-sm">
-                              {INSURANCE_PRIORITY_BADGES[priority]}
-                            </span>
-                          )}
-                          <span className="text-4xl mb-3">{opt.emoji}</span>
-                          <p className="font-bold mb-1" style={{ color: colors.headerBlue }}>{opt.name}</p>
-                          <p className="text-sm font-medium mb-3" style={{ color: colors.valueTeal }}>{opt.description}</p>
-                          <p className="mb-3 rounded-2xl bg-slate-50 px-4 py-3 text-left text-xs font-medium leading-relaxed text-slate-600">
-                            <span className="font-black text-[#3372B2]">Why this fits:</span> {whyThisFits}
-                          </p>
-                          <p className="font-black text-xl" style={{ color: colors.headerBlue }}>
-                            ${(opt.monthlyCost * multiplier).toLocaleString()}/mo
-                          </p>
-                          {opt.items && (
-                            <div className="mt-5 w-full rounded-2xl bg-slate-50 p-4 text-left">
-                              <p className="mb-3 text-xs font-black uppercase tracking-widest text-[#3372B2]">Best For:</p>
-                              <ul className="space-y-2">
-                                {opt.items.map((item) => (
-                                  <li key={item} className="flex items-start gap-2 text-sm font-medium leading-snug text-slate-600">
-                                    <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[#2D9B8E]" />
-                                    <span>{item}</span>
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
-                          )}
+              <AnimatePresence>
+                {expandedCategories[catName] && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="overflow-hidden"
+                  >
+                    <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+                      {opts.map((opt) => {
+                        const isSelected = selectedIds.includes(opt.id);
+                        const priorities = getInsurancePriorities(opt);
+                        const matchesPriority = priority ? priorities.includes(priority) : false;
+                        const isDimmed = !!priority && !matchesPriority;
+                        const whyThisFits = getInsuranceWhy(opt);
+
+                        return (
                           <div
-                            className="mt-4 w-6 h-6 rounded-full border-2 flex items-center justify-center"
-                            style={{
-                              backgroundColor: isSelected ? colors.selectedGreen : 'transparent',
-                              borderColor: isSelected ? colors.selectedGreen : colors.borderSlate
+                            key={opt.id}
+                            role="button"
+                            tabIndex={0}
+                            onClick={() => onToggle(category, opt.id)}
+                            onKeyDown={(event) => {
+                              if (event.key === 'Enter' || event.key === ' ') {
+                                event.preventDefault();
+                                onToggle(category, opt.id);
+                              }
                             }}
+                            className={`relative flex flex-col items-center rounded-3xl border-2 bg-white p-6 text-center transition-all group ${
+                              isSelected
+                                ? 'border-[#10B981] bg-emerald-50/10 ring-2 ring-emerald-50'
+                                : matchesPriority
+                                ? 'border-[#3372B2] bg-blue-50/40 shadow-[0_2px_6px_rgba(0,0,0,0.05)]'
+                                : isDimmed
+                                ? 'border-slate-100 opacity-60 hover:border-[#D6E4F0] hover:bg-[#F3F7FB] hover:opacity-100'
+                                : 'border-slate-100 hover:border-[#D6E4F0] hover:bg-[#F3F7FB] hover:shadow-[0_2px_6px_rgba(0,0,0,0.05)]'
+                            }`}
                           >
-                            {isSelected && <Check className="w-4 h-4 text-white" />}
+                            <InfoButton
+                              label={`Learn more about ${opt.name}`}
+                              onClick={() => setActiveInfoOption(opt)}
+                            />
+                            {matchesPriority && priority && (
+                              <span className="mb-3 rounded-full border border-blue-100 bg-white px-3 py-1 text-[10px] font-black uppercase tracking-widest text-[#3372B2] shadow-sm">
+                                {INSURANCE_PRIORITY_BADGES[priority]}
+                              </span>
+                            )}
+                            <CategoryIcon className="mb-3 h-10 w-10 text-[#3372B2]" aria-hidden="true" />
+                            <p className="mb-1 font-bold" style={{ color: colors.headerBlue }}>{opt.name}</p>
+                            <p className="mb-3 text-sm font-medium" style={{ color: colors.valueTeal }}>{opt.description}</p>
+                            <p className="mb-3 rounded-2xl bg-slate-50 px-4 py-3 text-left text-xs font-medium leading-relaxed text-slate-600">
+                              <span className="font-black text-[#3372B2]">Why this fits:</span> {whyThisFits}
+                            </p>
+                            <p className="text-xl font-black" style={{ color: colors.headerBlue }}>
+                              ${(opt.monthlyCost * multiplier).toLocaleString()}/mo
+                            </p>
+                            {opt.items && (
+                              <div className="mt-5 w-full rounded-2xl bg-slate-50 p-4 text-left">
+                                <p className="mb-3 text-xs font-black uppercase tracking-widest text-[#3372B2]">Best For:</p>
+                                <ul className="space-y-2">
+                                  {opt.items.map((item) => (
+                                    <li key={item} className="flex items-start gap-2 text-sm font-medium leading-snug text-slate-600">
+                                      <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[#2D9B8E]" />
+                                      <span>{item}</span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                            <div
+                              className="mt-4 flex h-6 w-6 items-center justify-center rounded-full border-2"
+                              style={{
+                                backgroundColor: isSelected ? colors.selectedGreen : 'transparent',
+                                borderColor: isSelected ? colors.selectedGreen : colors.borderSlate,
+                              }}
+                            >
+                              {isSelected && <Check className="h-4 w-4 text-white" />}
+                            </div>
                           </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-        ))}
+                        );
+                      })}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          );
+        })}
       </div>
 
       <InsuranceInfoModal

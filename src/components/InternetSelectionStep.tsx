@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Check, Wifi } from 'lucide-react';
+import { Check, Circle, Router, Wifi } from 'lucide-react';
 import { BeforeYouChooseCallout } from './BeforeYouChooseCallout';
 import { LessonAccordion, LessonAccordionItem } from './LessonAccordion';
 import { ModalShell } from './ModalShell';
@@ -141,6 +141,17 @@ export function InternetSelectionStep({
     ...(internetPlanDetails[opt.id] || {}),
   })), [options]);
 
+  const renderUsageIcon = (label?: string) => {
+    const iconClassName =
+      label === 'Light Use'
+        ? 'h-3.5 w-3.5 fill-emerald-500 text-emerald-500'
+        : label === 'Moderate Use'
+        ? 'h-3.5 w-3.5 fill-amber-500 text-amber-500'
+        : 'h-3.5 w-3.5 fill-red-500 text-red-500';
+
+    return <Circle className={iconClassName} aria-hidden="true" />;
+  };
+
   return (
     <div className="space-y-8">
       <BeforeYouChooseCallout
@@ -177,12 +188,12 @@ export function InternetSelectionStep({
                 </div>
               )}
               <div className="text-[#3372B2] font-black text-2xl mb-2">
-                <span className="mr-2">{opt.emoji}</span>
+                <Router className="mr-2 inline h-6 w-6" aria-hidden="true" />
                 ${(opt.monthlyCost * multiplier).toLocaleString()}/mo
               </div>
               {usageLabel && (
                 <div className={`mb-3 inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-black ${usageBadgeStyles[usageLabel] || 'bg-slate-50 text-slate-600 border-slate-200'}`}>
-                  <span>{usageBadgeIcons[usageLabel]}</span>
+                  {renderUsageIcon(usageLabel)}
                   {usageLabel}
                 </div>
               )}

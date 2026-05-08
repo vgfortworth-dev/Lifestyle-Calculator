@@ -11,9 +11,12 @@ import {
   MapPin, Home, ShieldCheck, ChevronRight, ChevronLeft, ChevronDown,
   RotateCcw, Info, CheckCircle2,
   Save, Loader2, Check, Sparkles,
-  Camera, MessageSquare, X,
+  Camera, MessageSquare, X, ShoppingBag, Gamepad2, Music, Tv, Newspaper, Bot,
+  Briefcase, Cloud, Shield, Dumbbell, Heart, Car, HeartPulse, Smile, Eye, Wifi,
+  Router, ShoppingCart, Shirt, Circle,
   PieChart as PieChartIcon 
 } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 
 import {
   REGIONS,
@@ -99,30 +102,30 @@ const INITIAL_STATE: QuizState = {
   },
 };
 
-const CATEGORY_EMOJIS: Record<string, string> = {
-  'Shopping': '??',
-  'Gaming': '??',
-  'Music': '??',
-  'Entertainment': '??',
-  'News & Books': '??',
-  'AI & Tech': '??',
-  'Productivity': '??',
-  'Cloud Storage': '??',
-  'Security': '???',
-  'Fitness': '??',
-  'Wellness': '??',
-  'Auto Care': '??',
-  'Auto': '??',
-  'Home': '??',
-  'Health': '??',
-  'Dental': '??',
-  'Vision': '??',
-  'Life': '???????????',
-  'Utilities': '?',
-  'Personal Vehicles': '??',
-  'Electric Vehicles': '??',
-  'Cycling': '??',
-  'General': '?'
+const CATEGORY_ICONS: Record<string, LucideIcon> = {
+  'Shopping': ShoppingBag,
+  'Gaming': Gamepad2,
+  'Music': Music,
+  'Entertainment': Tv,
+  'News & Books': Newspaper,
+  'AI & Tech': Bot,
+  'Productivity': Briefcase,
+  'Cloud Storage': Cloud,
+  'Security': Shield,
+  'Fitness': Dumbbell,
+  'Wellness': Heart,
+  'Auto Care': Car,
+  'Auto': Car,
+  'Home': Home,
+  'Health': HeartPulse,
+  'Dental': Smile,
+  'Vision': Eye,
+  'Life': ShieldCheck,
+  'Utilities': Wifi,
+  'Personal Vehicles': Car,
+  'Electric Vehicles': Car,
+  'Cycling': Car,
+  'General': Sparkles,
 };
 
 const COLORS = {
@@ -135,8 +138,8 @@ const COLORS = {
 
 const USE_SUPABASE = true;
 const APP_LOGO_SRC = '/images/Liestyle calculator logo_Lifestyle Calculator Logo.svg';
-const INTRO_VIDEO_URL = 'https://www.youtube.com/watch?v=YOUR_VIDEO_ID';
-const INTRO_VIDEO_STORAGE_KEY = 'lifestyleCalculatorIntroSeen';
+const INTRO_VIDEO_URL = 'https://www.youtube.com/watch?v=ACzi_o4b7o8';
+const INTRO_VIDEO_STORAGE_KEY = 'lifestyleIntroVideoSeen';
 
 function getIntroVideoEmbedUrl(url: string) {
   const trimmedUrl = url.trim();
@@ -216,14 +219,16 @@ const USAGE_BADGE_STYLES: Record<string, string> = {
   'Heavy Driving': 'bg-red-50 text-red-700 border-red-200',
 };
 
-const USAGE_BADGE_ICONS: Record<string, string> = {
-  'Light Use': '??',
-  'Moderate Use': '??',
-  'Heavy Use': '??',
-  'Light Driving': '??',
-  'Moderate Driving': '??',
-  'Heavy Driving': '??',
-};
+function getCategoryIcon(name: string) {
+  return CATEGORY_ICONS[name] || Sparkles;
+}
+
+function CategoryIcon({ name, className = 'h-5 w-5' }: { name: string; className?: string }) {
+  const Icon = getCategoryIcon(name);
+  return <Icon className={className} aria-hidden="true" />;
+}
+
+const USAGE_BADGE_ICONS: Record<string, string> = {};
 
 const EXTRA_CLOUD_STORAGE_OPTIONS = SUBSCRIPTION_OPTIONS.filter(option =>
   ['onedrive-100gb', 'googleone-2tb', 'box-personal-pro'].includes(option.id)
@@ -1025,7 +1030,7 @@ export default function App() {
               onToggle={toggleMultiSelection}
               multiplier={currentRegion.costMultiplier}
               colors={COLORS}
-              categoryEmojis={CATEGORY_EMOJIS}
+              categoryIcons={CATEGORY_ICONS}
             />
           </QuizWrapper>
         );
@@ -1451,7 +1456,7 @@ function MultiSelectionStep({ options, category, state, onToggle, multiplier = 1
                   <ChevronDown className="w-5 h-5 group-hover:text-slate-700" style={{ color: COLORS.headerBlue }} />
                 </div>
                 <h3 className="text-xl font-black uppercase tracking-wider flex items-center gap-3" style={{ color: COLORS.headerBlue }}>
-                  <span className="text-2xl">{CATEGORY_EMOJIS[catName] || '?'}</span>
+                  <CategoryIcon name={catName} className="h-6 w-6" />
                   {catName}
                   <span className="text-sm font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">{(opts as any[]).length}</span>
                 </h3>
@@ -1676,13 +1681,29 @@ function FeedbackTool({ stepName, userId }: { stepName: string, userId: string }
   };
 
   const handleSubmit = async () => {
+    const trimmedNote = note.trim();
+    if (!trimmedNote && !screenshot) {
+      alert('Add a note or screenshot before submitting feedback.');
+      return;
+    }
+
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
+    if (userError || !user) {
+      alert('You need to be signed in to submit feedback.');
+      return;
+    }
+
     let final_screenshot_url = null;
 
     if (screenshot) {
       try {
         const response = await fetch(screenshot);
         const blob = await response.blob();
-        const fileName = `${userId}/${Date.now()}.png`;
+        const fileName = `${user.id}/${Date.now()}.png`;
 
         const { error: uploadError } = await supabase.storage
           .from('feedback_screenshots')
@@ -1709,20 +1730,27 @@ function FeedbackTool({ stepName, userId }: { stepName: string, userId: string }
       }
     }
 
-    const { error: dbError } = await supabase.from('pilot_feedback').insert({
-      user_id: userId,
+    const payload = {
+      user_id: user.id,
       step_name: stepName,
-      note,
-      screenshot_url: final_screenshot_url
-    });
+      note: trimmedNote,
+      ...(final_screenshot_url ? { screenshot_url: final_screenshot_url } : {}),
+    };
+
+    const { error: dbError } = await supabase.from('pilot_feedback').insert([payload]);
 
     if (dbError) {
       console.error('Database Error:', dbError);
-      alert(`Database Error: ${dbError.message}`);
+      if (dbError.code === '42501') {
+        alert('Feedback permissions are not set up yet in Supabase. Apply the pilot_feedback insert policy and try again.');
+      } else {
+        alert(`Database Error: ${dbError.message}`);
+      }
     } else {
       alert('Feedback submitted! Thank you.');
       setNote('');
       setScreenshot(null);
+      setRawScreenshot(null);
       setIsOpen(false);
     }
   };
@@ -2062,7 +2090,7 @@ function ResultsStep({ state, monthlyTotal, annualTotal, recommendedSalary, onRe
         name: `Grocery Cart (${groceryItemCount})`,
         cost: groceryMonthlyCost,
         category: 'Food',
-        emoji: '??',
+        emoji: undefined,
       });
     }
     state.selections.transportation.forEach((id: string) => {
@@ -2092,7 +2120,7 @@ function ResultsStep({ state, monthlyTotal, annualTotal, recommendedSalary, onRe
         name: `Closet Items (${clothingItemCount})`,
         cost: clothingMonthlyCost,
         category: 'Clothing',
-        emoji: '??',
+        emoji: undefined,
       });
     }
     
@@ -2213,7 +2241,9 @@ function ResultsStep({ state, monthlyTotal, annualTotal, recommendedSalary, onRe
                   return (
                     <div key={`${item.category}-${item.name}-${i}`} className="flex justify-between items-center py-3 border-b border-slate-50 last:border-0">
                       <div className="flex items-center gap-4">
-                        <span className="text-2xl w-8 h-8 flex items-center justify-center bg-slate-50 rounded-lg">{item.emoji}</span>
+                        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-50">
+                          {item.emoji ? <span className="text-2xl">{item.emoji}</span> : <CategoryIcon name={item.category} className="h-5 w-5 text-slate-500" />}
+                        </span>
                         <div className="flex flex-col">
                           <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">{item.category}</span>
                           <span className="font-bold text-slate-700">{item.name}</span>
@@ -2234,7 +2264,9 @@ function ResultsStep({ state, monthlyTotal, annualTotal, recommendedSalary, onRe
                       aria-expanded={isExpanded}
                     >
                       <div className="flex items-center gap-4">
-                        <span className="text-2xl w-8 h-8 flex items-center justify-center bg-white rounded-lg">{row.emoji}</span>
+                        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-white">
+                          {row.emoji ? <span className="text-2xl">{row.emoji}</span> : <CategoryIcon name={row.category} className="h-5 w-5 text-slate-500" />}
+                        </span>
                         <div className="flex flex-col">
                           <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">{row.category}</span>
                           <span className="font-bold text-slate-700">{row.count} selected</span>
