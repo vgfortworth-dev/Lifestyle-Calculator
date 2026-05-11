@@ -49,6 +49,33 @@ function getOtherServicesCardEmoji(card: OtherServicesCard) {
   return OTHER_SERVICE_CARD_EMOJIS[card.id] ?? '\u2728';
 }
 
+function getOtherServicesTitleLines(title: string) {
+  if (title.includes('/')) {
+    const slashParts = title
+      .split('/')
+      .map((part) => part.trim())
+      .filter(Boolean);
+
+    if (slashParts.length >= 2) {
+      const firstLine = slashParts.slice(0, Math.ceil(slashParts.length / 2)).join(' / ');
+      const secondLine = slashParts.slice(Math.ceil(slashParts.length / 2)).join(' / ');
+      return [firstLine, secondLine].filter(Boolean);
+    }
+  }
+
+  const words = title.trim().split(/\s+/).filter(Boolean);
+
+  if (words.length === 2 && title.length >= 14) {
+    return words;
+  }
+
+  if (words.length === 3 && title.length >= 18) {
+    return [words.slice(0, 2).join(' '), words[2]];
+  }
+
+  return [title];
+}
+
 function formatCurrency(value: number) {
   return value.toLocaleString(undefined, {
     minimumFractionDigits: 2,
@@ -291,6 +318,8 @@ export function OtherServicesStep({ state, onChange }: OtherServicesStepProps) {
           {activeCategoryData.cards.map((card) => {
             const groupHasSelection = card.options.some((option) => (otherSelections[option.id]?.quantity || 0) > 0);
             const groupEmoji = getOtherServicesCardEmoji(card);
+            const titleLines = getOtherServicesTitleLines(card.title);
+            const isMultiLineTitle = titleLines.length > 1;
 
             return (
               <div
@@ -303,8 +332,18 @@ export function OtherServicesStep({ state, onChange }: OtherServicesStepProps) {
               >
                 <div className="px-1 pb-2 pt-1 text-center">
                   <StableEmoji symbol={groupEmoji} className="text-[2.1rem] leading-none sm:text-[2.5rem]" />
-                  <h5 className="mt-2 break-words px-0.5 text-center text-[1.42rem] font-extrabold uppercase leading-[1.12] tracking-[-0.02em] text-[#159A8C] sm:text-[1.4rem] lg:text-[1.48rem]">
-                    {card.title}
+                  <h5
+                    className={`mt-2 px-0 text-center font-extrabold uppercase text-[#159A8C] break-normal whitespace-normal hyphens-none ${
+                      isMultiLineTitle
+                        ? 'text-[1.34rem] leading-[1.08] tracking-[-0.015em] sm:text-[1.32rem] lg:text-[1.4rem]'
+                        : 'text-[1.42rem] leading-[1.12] tracking-[-0.02em] sm:text-[1.4rem] lg:text-[1.48rem]'
+                    }`}
+                  >
+                    {titleLines.map((line, index) => (
+                      <span key={`${card.id}-title-line-${index}`} className="block">
+                        {line}
+                      </span>
+                    ))}
                   </h5>
                   {card.priceHint && (
                     <p className="mt-1.5 text-sm font-extrabold uppercase tracking-[0.24em] text-[#10B981]">{card.priceHint}</p>
