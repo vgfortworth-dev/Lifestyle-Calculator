@@ -1,11 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
-  FerrisWheel,
-  Music4,
-  Ticket,
   Check,
   Sparkles,
-  Trophy,
   Minus,
   Plus,
   ShoppingCart,
@@ -13,15 +9,45 @@ import {
 } from 'lucide-react';
 import {
   OTHER_SERVICES_CATEGORIES,
+  OtherServicesCard,
   OtherServicesCategoryId,
   OtherServicesOffer,
 } from '../data/otherServices';
+import { StableEmoji } from './StableEmoji';
 import { QuizState } from '../types';
 
 type OtherServicesStepProps = {
   state: QuizState;
   onChange: (other: QuizState['selections']['other']) => void;
 };
+
+const OTHER_SERVICE_CARD_EMOJIS: Record<string, string> = {
+  'college-football': '\u{1F3C8}',
+  'college-basketball': '\u{1F3C0}',
+  'college-baseball': '\u26BE',
+  'concert-niche': '\u{1F3B5}',
+  'concert-established': '\u{1F3B6}',
+  'concert-superstar': '\u{1F3A4}',
+  'mlb-weekday': '\u26BE',
+  'mlb-weekend': '\u26BE\u26BE',
+  'mlb-rivalry-playoffs': '\u26BE\u26BE\u26BE',
+  'nfl-standard': '\u{1F3C8}',
+  'nfl-premium': '\u{1F3C8}\u{1F3C8}',
+  'nfl-marquee': '\u{1F3C8}\u{1F3C8}\u{1F3C8}',
+  'theatre-casa': '\u{1F3AD}',
+  'theatre-bass': '\u{1F39F}\uFE0F',
+  'theatre-fair-park': '\u2B50',
+  'events-zoo': '\u{1F981}',
+  'events-sixflags': '\u{1F3A2}',
+  'events-statefair': '\u{1F3A1}',
+  'events-dickies': '\u{1F39F}\uFE0F',
+  'events-cowtown': '\u{1F3C3}',
+  'events-botanic': '\u{1F338}',
+};
+
+function getOtherServicesCardEmoji(card: OtherServicesCard) {
+  return OTHER_SERVICE_CARD_EMOJIS[card.id] ?? '\u2728';
+}
 
 function formatCurrency(value: number) {
   return value.toLocaleString(undefined, {
@@ -101,21 +127,6 @@ export function OtherServicesStep({ state, onChange }: OtherServicesStepProps) {
   const activeCategoryData = useMemo(
     () => OTHER_SERVICES_CATEGORIES.find((category) => category.id === activeCategory) ?? OTHER_SERVICES_CATEGORIES[0],
     [activeCategory]
-  );
-
-  const activeOffers = useMemo(
-    () =>
-      activeCategoryData.cards.flatMap((card) =>
-        card.options.map((option) => ({
-          ...option,
-          cardId: card.id,
-          cardTitle: card.title,
-          cardIcon: card.icon,
-          priceHint: card.priceHint,
-          categoryLabel: activeCategoryData.label,
-        }))
-      ),
-    [activeCategoryData]
   );
 
   const selectedItems = useMemo(
@@ -276,84 +287,98 @@ export function OtherServicesStep({ state, onChange }: OtherServicesStepProps) {
           </div>
         )}
 
-        <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {activeOffers.map((offer) => {
-            const quantity = otherSelections[offer.id]?.quantity || 0;
-            const isInCart = quantity > 0;
-            const monthlyCost = Number((offer.price / 12).toFixed(2));
+        <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {activeCategoryData.cards.map((card) => {
+            const groupHasSelection = card.options.some((option) => (otherSelections[option.id]?.quantity || 0) > 0);
+            const groupEmoji = getOtherServicesCardEmoji(card);
 
             return (
               <div
-                key={offer.id}
-                className={`relative flex h-full min-w-0 flex-col rounded-3xl border-2 bg-white p-4 text-left transition-all ${
-                  isInCart
-                    ? 'border-[#10B981] bg-emerald-50/20 ring-2 ring-emerald-50 shadow-[0_4px_16px_rgba(16,185,129,0.12)]'
-                    : 'border-slate-100 hover:border-[#D6E4F0] hover:bg-[#F3F7FB] hover:shadow-[0_2px_6px_rgba(0,0,0,0.05)]'
-                } ${lastChangedItemId === offer.id ? 'scale-[1.01]' : ''}`}
+                key={card.id}
+                className={`rounded-[30px] border bg-gradient-to-b from-[#F8FEFD] via-white to-white p-4 shadow-sm transition-all sm:p-5 ${
+                  groupHasSelection
+                    ? 'border-[#6CE6D1] shadow-[0_10px_30px_rgba(16,185,129,0.12)]'
+                    : 'border-[#8AEBDD] hover:border-[#56D8C0] hover:shadow-[0_8px_24px_rgba(51,114,178,0.08)]'
+                }`}
               >
-                <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="rounded-full bg-white px-3 py-1 text-[11px] font-black uppercase tracking-wide text-slate-500 shadow-sm">
-                      {offer.categoryLabel}
-                    </span>
-                    <span className="rounded-full bg-blue-100 px-3 py-1 text-[11px] font-black uppercase tracking-wide text-[#3372B2]">
-                      {offer.cardTitle}
-                    </span>
-                    {offer.priceHint && (
-                      <span className="rounded-full bg-orange-100 px-3 py-1 text-[11px] font-black uppercase tracking-wide text-orange-700">
-                        {offer.priceHint}
-                      </span>
-                    )}
-                  </div>
-                  <div className="mt-4 space-y-1">
-                    <h5 className="text-lg font-black text-slate-900">{offer.name}</h5>
-                    <p className="text-sm font-medium leading-relaxed text-slate-500">{offer.description}</p>
-                  </div>
+                <div className="px-2 pb-3 pt-1 text-center">
+                  <StableEmoji symbol={groupEmoji} className="text-4xl leading-none sm:text-5xl" />
+                  <h5 className="mt-3 break-words text-center text-3xl font-black uppercase leading-tight text-[#159A8C] sm:text-[2.1rem]">
+                    {card.title}
+                  </h5>
+                  {card.priceHint && (
+                    <p className="mt-2 text-base font-black uppercase tracking-[0.3em] text-[#10B981]">{card.priceHint}</p>
+                  )}
                 </div>
 
-                <div className="mt-4 flex flex-1 flex-col justify-between gap-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="text-xs font-black uppercase tracking-widest text-slate-400">Event or annual price</p>
-                      <p className="mt-1 text-3xl font-black text-[#3372B2]">${formatDisplayPrice(offer.price)}</p>
-                      <p className="mt-1 text-xs font-bold uppercase tracking-widest text-slate-400">
-                        about ${formatCurrency(monthlyCost)}/mo
-                      </p>
-                    </div>
-                    {isInCart && (
-                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#10B981] text-white shadow-md">
-                        <Check className="h-4 w-4" />
-                      </div>
-                    )}
-                  </div>
+                <div className="space-y-4">
+                  {card.options.map((offer) => {
+                    const quantity = otherSelections[offer.id]?.quantity || 0;
+                    const isInCart = quantity > 0;
+                    const monthlyCost = Number((offer.price / 12).toFixed(2));
 
-                  <div className="mt-auto min-w-0">
-                    {quantity === 0 ? (
-                      <button
-                        type="button"
-                        onClick={() => updateOptionQuantity(offer, offer.cardTitle, offer.categoryLabel, offer.cardIcon, 1)}
-                        className="flex w-full items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-black uppercase tracking-widest text-slate-600 transition-all hover:border-[#10B981] hover:bg-emerald-50 hover:text-emerald-700"
-                        aria-label={`Add ${offer.name} to cart`}
+                    return (
+                      <div
+                        key={offer.id}
+                        className={`relative rounded-[24px] border bg-[#EEF4FB] p-4 transition-all ${
+                          isInCart
+                            ? 'border-[#9FE7D8] ring-2 ring-emerald-100'
+                            : 'border-[#D7E3F1]'
+                        } ${lastChangedItemId === offer.id ? 'scale-[1.01]' : ''}`}
                       >
-                        Add to Cart
-                      </button>
-                    ) : (
-                      <QuantityControls
-                        quantity={quantity}
-                        onDecrement={() => updateOptionQuantity(offer, offer.cardTitle, offer.categoryLabel, offer.cardIcon, -1)}
-                        onIncrement={() => updateOptionQuantity(offer, offer.cardTitle, offer.categoryLabel, offer.cardIcon, 1)}
-                        tone="selected"
-                        label="In Cart"
-                      />
-                    )}
-                  </div>
+                        <div className="space-y-4">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <h6 className="text-base font-black leading-tight text-slate-900">{offer.name}</h6>
+                              <p className="mt-1 text-sm font-medium leading-relaxed text-slate-500">{offer.description}</p>
+                            </div>
+                            {isInCart && (
+                              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#10B981] text-white shadow-md">
+                                <Check className="h-4 w-4" />
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="min-w-0">
+                            <p className="text-4xl font-black leading-none text-[#3372B2]">
+                              ${formatDisplayPrice(offer.price)}
+                            </p>
+                            <p className="mt-2 text-xs font-bold uppercase tracking-widest text-slate-400">
+                              about ${formatCurrency(monthlyCost)}/mo
+                            </p>
+                          </div>
+
+                          <div className="min-w-0">
+                            {quantity === 0 ? (
+                              <button
+                                type="button"
+                                onClick={() => updateOptionQuantity(offer, card.title, activeCategoryData.label, card.icon, 1)}
+                                className="flex w-full items-center justify-center rounded-full border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-700 transition-all hover:border-[#10B981] hover:bg-emerald-50 hover:text-emerald-700"
+                                aria-label={`Add ${offer.name} to cart`}
+                              >
+                                Add to cart
+                              </button>
+                            ) : (
+                              <QuantityControls
+                                quantity={quantity}
+                                onDecrement={() => updateOptionQuantity(offer, card.title, activeCategoryData.label, card.icon, -1)}
+                                onIncrement={() => updateOptionQuantity(offer, card.title, activeCategoryData.label, card.icon, 1)}
+                                tone="selected"
+                                label="In Cart"
+                              />
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             );
           })}
         </div>
 
-        {activeOffers.length === 0 && (
+        {activeCategoryData.cards.length === 0 && (
           <div className="mt-6 rounded-2xl border border-dashed border-slate-200 px-4 py-10 text-center text-sm font-medium text-slate-400">
             No other services are available in this category yet.
           </div>
@@ -503,7 +528,7 @@ export function OtherServicesStep({ state, onChange }: OtherServicesStepProps) {
       <section className="rounded-3xl border border-slate-100 bg-slate-50 px-5 py-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-sm font-medium text-slate-600">
-            Keep this step realistic by adding only the events, packages, and memberships you would actually pay for during the year.
+            Selections here still flow into the calculator total as monthly amounts based on the displayed annual or event price.
           </p>
           <p className="text-sm font-black text-[#3372B2]">{totalSelectedCount} selected</p>
         </div>
