@@ -20,6 +20,7 @@ export function RiasecQuiz({ onTryLifestyle }: RiasecQuizProps) {
   const [questions, setQuestions] = useState<RiasecQuestion[]>([]);
   const [isLoadingQuestions, setIsLoadingQuestions] = useState(true);
   const [isQuizUnavailable, setIsQuizUnavailable] = useState(false);
+  const [reloadToken, setReloadToken] = useState(0);
   const currentQuestion = questions[currentQuestionIndex];
   const currentAnswer = currentQuestion ? answers[currentQuestion.id] : undefined;
   const progressQuestion = Math.min(currentQuestionIndex + 1, questions.length);
@@ -45,7 +46,7 @@ export function RiasecQuiz({ onTryLifestyle }: RiasecQuizProps) {
       setIsLoadingQuestions(false);
 
       if (import.meta.env.DEV) {
-        console.info(`[RIASEC] Quiz is using ${loaded.source} with ${loaded.questions.length} question(s).`);
+        console.info(`[RIASEC] Quiz is using ${loaded.source} with ${loaded.questions.length} question(s).`, loaded.diagnostics);
       }
     };
 
@@ -54,7 +55,7 @@ export function RiasecQuiz({ onTryLifestyle }: RiasecQuizProps) {
     return () => {
       isActive = false;
     };
-  }, []);
+  }, [reloadToken]);
 
   useEffect(() => {
     if (!nextQuestionImageUrl) return;
@@ -100,6 +101,13 @@ export function RiasecQuiz({ onTryLifestyle }: RiasecQuizProps) {
     setCurrentQuestionIndex(0);
     setHasStarted(false);
     window.scrollTo(0, 0);
+  };
+
+  const handleRetryLoad = () => {
+    setQuestions([]);
+    setIsQuizUnavailable(false);
+    setCurrentQuestionIndex(0);
+    setReloadToken((current) => current + 1);
   };
 
   return (
@@ -148,9 +156,18 @@ export function RiasecQuiz({ onTryLifestyle }: RiasecQuizProps) {
 
         {hasStarted && !result && !isLoadingQuestions && (isQuizUnavailable || !currentQuestion) && (
           <div className="rounded-3xl border border-red-100 bg-white p-8 shadow-xl">
-            <p className="text-center text-sm font-bold text-red-600">
-              The RIASEC quiz is currently unavailable. Please try again later.
-            </p>
+            <div className="space-y-4 text-center">
+              <p className="text-sm font-bold text-red-600">
+                The RIASEC quiz is currently unavailable. Please try again later.
+              </p>
+              <button
+                type="button"
+                onClick={handleRetryLoad}
+                className="inline-flex items-center justify-center rounded-2xl bg-slate-900 px-5 py-3 text-sm font-black text-white transition-all hover:bg-slate-800"
+              >
+                Retry loading quiz
+              </button>
+            </div>
           </div>
         )}
 

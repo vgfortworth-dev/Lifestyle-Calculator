@@ -6,6 +6,15 @@ const RIASEC_CATEGORIES: RiasecCategory[] = ['R', 'I', 'A', 'S', 'E', 'C'];
 const RIASEC_TABLE = 'riasec_questions';
 const RIASEC_SELECT_COLUMNS = 'id,prompt,category,display_order,image_path,alt_text,is_active,cloudinary_public_id';
 const REQUIRED_RIASEC_QUESTION_COUNT = 30;
+const RIASEC_QUERY_RETRY_DELAY_MS = 900;
+
+export type RiasecQuestionLoadDiagnostics = {
+  errorCode?: string | null;
+  errorMessage?: string | null;
+  mappedCount: number;
+  rawCount: number;
+  reason: 'success' | 'query_failed' | 'invalid_count' | 'unexpected_failure';
+};
 
 type RiasecQuestionRow = {
   id: string | number;
@@ -30,10 +39,12 @@ function logRiasecQueryDiagnostic({
   table,
   error,
   questionCount,
+  mappedQuestionCount,
 }: {
   table: string;
   error?: RiasecQueryError;
   questionCount?: number | null;
+  mappedQuestionCount?: number | null;
 }) {
   const payload = {
     table,
@@ -42,14 +53,25 @@ function logRiasecQueryDiagnostic({
     errorDetails: error?.details || null,
     errorHint: error?.hint || null,
     questionCount: questionCount ?? null,
+    mappedQuestionCount: mappedQuestionCount ?? null,
   };
 
-  if (!import.meta.env.DEV) {
+  if (!import.meta.env.DEV && !error) {
     return;
   }
 
   if (error) {
-    console.error('[RIASEC] Supabase diagnostic', payload);
+    if (import.meta.env.DEV) {
+      console.error('[RIASEC] Supabase diagnostic', payload);
+      return;
+    }
+
+    console.warn('[RIASEC] Query failed', {
+      errorCode: payload.errorCode,
+      errorMessage: payload.errorMessage,
+      questionCount: payload.questionCount,
+      mappedQuestionCount: payload.mappedQuestionCount,
+    });
     return;
   }
 
@@ -145,7 +167,15 @@ async function queryRiasecQuestions() {
     .order('display_order', { ascending: true });
 }
 
-export async function loadRiasecQuestions(): Promise<{ questions: RiasecQuestion[]; source: 'supabase' | 'unavailable' }> {
+function delay(ms: number) {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
+
+async function loadRiasecQuestionsOnce(): Promise<{
+  diagnostics: RiasecQuestionLoadDiagnostics;
+  questions: RiasecQuestion[];
+  source: 'supabase' | 'unavailable';
+}> {
   try {
     const { data, error } = await queryRiasecQuestions();
 
@@ -153,32 +183,106 @@ export async function loadRiasecQuestions(): Promise<{ questions: RiasecQuestion
       logRiasecQueryDiagnostic({
         table: RIASEC_TABLE,
         error,
+        questionCount: data?.length ?? 0,
+        mappedQuestionCount: 0,
       });
-      return { questions: [], source: 'unavailable' };
+      return {
+        questions: [],
+        source: 'unavailable',
+        diagnostics: {
+          errorCode: error.code || null,
+          errorMessage: error.message || null,
+          mappedCount: 0,
+          rawCount: data?.length ?? 0,
+          reason: 'query_failed',
+        },
+      };
     }
 
+    const rawCount = (data || []).length;
     const questions = (data || [])
       .map((row) => mapQuestionRow(row as RiasecQuestionRow))
       .filter((question): question is RiasecQuestion => question !== null)
       .sort((a, b) => (a.displayOrder ?? Number.MAX_SAFE_INTEGER) - (b.displayOrder ?? Number.MAX_SAFE_INTEGER));
 
     if (import.meta.env.DEV) {
-      console.info(`[RIASEC] Loaded ${questions.length} active question(s) from Supabase.`);
+      console.info(`[RIASEC] Loaded ${questions.length} mapped active question(s) from Supabase from ${rawCount} raw row(s).`);
     }
     logRiasecQueryDiagnostic({
       table: RIASEC_TABLE,
-      questionCount: questions.length,
+      questionCount: rawCount,
+      mappedQuestionCount: questions.length,
     });
 
     if (questions.length !== REQUIRED_RIASEC_QUESTION_COUNT) {
-      return { questions: [], source: 'unavailable' };
+      if (!import.meta.env.DEV) {
+        console.warn('[RIASEC] Query returned an unexpected question count', {
+          questionCount: rawCount,
+          mappedQuestionCount: questions.length,
+        });
+      }
+
+      return {
+        questions: [],
+        source: 'unavailable',
+        diagnostics: {
+          errorCode: null,
+          errorMessage: null,
+          mappedCount: questions.length,
+          rawCount,
+          reason: 'invalid_count',
+        },
+      };
     }
 
-    return { questions, source: 'supabase' };
+    return {
+      questions,
+      source: 'supabase',
+      diagnostics: {
+        errorCode: null,
+        errorMessage: null,
+        mappedCount: questions.length,
+        rawCount,
+        reason: 'success',
+      },
+    };
   } catch (error) {
     if (import.meta.env.DEV) {
       console.error('[RIASEC] Unexpected question loading failure.', error);
     }
-    return { questions: [], source: 'unavailable' };
+    if (!import.meta.env.DEV) {
+      console.warn('[RIASEC] Query failed', {
+        errorCode: null,
+        errorMessage: error instanceof Error ? error.message : 'Unexpected question loading failure',
+        questionCount: 0,
+        mappedQuestionCount: 0,
+      });
+    }
+    return {
+      questions: [],
+      source: 'unavailable',
+      diagnostics: {
+        errorCode: null,
+        errorMessage: error instanceof Error ? error.message : 'Unexpected question loading failure',
+        mappedCount: 0,
+        rawCount: 0,
+        reason: 'unexpected_failure',
+      },
+    };
   }
+}
+
+export async function loadRiasecQuestions(): Promise<{
+  diagnostics: RiasecQuestionLoadDiagnostics;
+  questions: RiasecQuestion[];
+  source: 'supabase' | 'unavailable';
+}> {
+  const firstAttempt = await loadRiasecQuestionsOnce();
+
+  if (firstAttempt.source === 'supabase') {
+    return firstAttempt;
+  }
+
+  await delay(RIASEC_QUERY_RETRY_DELAY_MS);
+  return loadRiasecQuestionsOnce();
 }
