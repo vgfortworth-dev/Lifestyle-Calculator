@@ -30,14 +30,57 @@ function QuantityControls({
   onIncrement,
   tone = 'default',
   label = 'Quantity',
+  compact = false,
 }: {
   quantity: number;
   onDecrement: () => void;
   onIncrement: () => void;
   tone?: 'default' | 'selected';
   label?: string;
+  compact?: boolean;
 }) {
   const isSelected = tone === 'selected';
+
+  if (compact) {
+    return (
+      <div
+        className={`flex items-center justify-between rounded-2xl border px-3 py-2.5 ${
+          isSelected ? 'border-emerald-100 bg-emerald-50' : 'border-slate-100 bg-slate-50'
+        }`}
+      >
+        <p className={`text-[10px] font-black uppercase tracking-widest ${isSelected ? 'text-emerald-700' : 'text-slate-500'}`}>
+          {label}
+        </p>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={onDecrement}
+            className={`flex h-10 w-10 items-center justify-center rounded-full border bg-white transition-all ${
+              isSelected
+                ? 'border-emerald-200 text-emerald-700 hover:bg-emerald-100'
+                : 'border-slate-200 text-slate-600 hover:border-[#10B981] hover:bg-emerald-50 hover:text-emerald-700'
+            }`}
+          >
+            <Minus className="h-4 w-4" />
+          </button>
+          <div className={`min-w-[36px] text-center text-base font-black ${isSelected ? 'text-[#10B981]' : 'text-slate-900'}`}>
+            {quantity}
+          </div>
+          <button
+            type="button"
+            onClick={onIncrement}
+            className={`flex h-10 w-10 items-center justify-center rounded-full border bg-white transition-all ${
+              isSelected
+                ? 'border-emerald-200 text-emerald-700 hover:bg-emerald-100'
+                : 'border-slate-200 text-slate-600 hover:border-[#10B981] hover:bg-emerald-50 hover:text-emerald-700'
+            }`}
+          >
+            <Plus className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -154,23 +197,29 @@ export function GrocerySelectionStep({
 
   return (
     <div className="space-y-6">
-      <div className="rounded-3xl border border-blue-100 bg-blue-50/70 p-6 shadow-sm">
-        <div className="flex items-start gap-4">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white text-[#3372B2] shadow-sm">
+      <div className="rounded-3xl border border-blue-100 bg-blue-50/70 p-4 shadow-sm sm:p-6">
+        <div className="flex items-start gap-4 sm:gap-4">
+          <div className="hidden h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white text-[#3372B2] shadow-sm sm:flex">
             <ShoppingCart className="h-6 w-6" />
           </div>
-          <div className="space-y-3">
+          <div className="space-y-2 sm:space-y-3">
             <div>
-              <h3 className="text-2xl font-black text-slate-900">Food & Groceries</h3>
-              <p className="mt-1 text-sm font-bold text-[#3372B2]">
+              <h3 className="text-xl font-black text-slate-900 sm:text-2xl">Food & Groceries</h3>
+              <p className="mt-1 hidden text-sm font-bold text-[#3372B2] sm:block">
                 Add grocery items you would actually buy, then review your cart to see what your food budget looks like.
               </p>
+              <p className="mt-1 text-sm font-bold leading-snug text-[#3372B2] sm:hidden">
+                Build a quick cart with the groceries you would actually buy.
+              </p>
             </div>
-            <p className="text-sm font-medium leading-relaxed text-slate-600">
+            <p className="hidden text-sm font-medium leading-relaxed text-slate-600 sm:block">
               Browse like a grocery run. Add items, tweak quantities, open your cart, and learn what kind of shopper your choices make you.
             </p>
+            <p className="text-sm font-medium leading-relaxed text-slate-600 sm:hidden">
+              Add items, tweak quantities, and check your cart as you shop.
+            </p>
             {totalItemCount > 0 && (
-              <div className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-bold text-emerald-700">
+              <div className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-sm font-bold text-emerald-700">
                 <Sparkles className="h-4 w-4" />
                 {shopperBadge.label}
               </div>
@@ -184,10 +233,10 @@ export function GrocerySelectionStep({
           <div className="min-w-0 flex-1 space-y-3">
             <div>
               <p className="text-xs font-black uppercase tracking-widest text-slate-400">Browse Groceries</p>
-              <h4 className="text-xl font-black text-slate-900">Build a realistic weekly cart</h4>
+              <h4 className="text-lg font-black text-slate-900 sm:text-xl">Build a realistic weekly cart</h4>
             </div>
-            <div className="-mx-1 overflow-visible pb-1 sm:overflow-x-auto lg:overflow-visible">
-              <div className="flex flex-wrap gap-2 px-1 sm:min-w-max sm:flex-nowrap sm:gap-3 lg:min-w-0 lg:flex-wrap">
+            <div className="-mx-4 overflow-x-auto pb-1 sm:-mx-1 sm:overflow-visible">
+              <div className="flex min-w-max gap-2 px-4 sm:flex-wrap sm:gap-3 sm:px-1 lg:min-w-0">
                 {GROCERY_BROWSE_CATEGORIES.map((tab) => {
                   const isActive = tab === activeCategory;
                   return (
@@ -212,7 +261,7 @@ export function GrocerySelectionStep({
           <button
             type="button"
             onClick={() => setIsCartOpen(true)}
-            className="inline-flex w-full shrink-0 items-center justify-center gap-2 self-start rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-black text-slate-700 shadow-sm transition-all hover:border-[#D6E4F0] hover:bg-[#F3F7FB] sm:w-auto"
+            className="inline-flex w-full shrink-0 items-center justify-center gap-2 self-start rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-700 shadow-sm transition-all hover:border-[#D6E4F0] hover:bg-[#F3F7FB] sm:w-auto sm:px-5"
             aria-label="Open grocery cart"
           >
             <ShoppingCart className="h-5 w-5" />
@@ -225,7 +274,100 @@ export function GrocerySelectionStep({
           </button>
         </div>
 
-        <div className="mt-5 grid grid-cols-1 gap-4 sm:mt-6 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="mt-4 space-y-3 sm:hidden">
+          {activeItems.map((item) => {
+            const quantity = groceryCart[item.id]?.quantity || 0;
+            const isInCart = quantity > 0;
+            const displayPrice = item.itemPrice * multiplier;
+
+            return (
+              <div
+                key={`${item.id}-mobile`}
+                className={`rounded-3xl border-2 bg-white p-3 transition-all ${
+                  isInCart
+                    ? 'border-[#10B981] bg-emerald-50/20 shadow-[0_4px_16px_rgba(16,185,129,0.12)]'
+                    : 'border-slate-100'
+                }`}
+              >
+                <div className="flex items-start gap-3">
+                  <div className="h-24 w-24 shrink-0 overflow-hidden rounded-2xl bg-slate-100">
+                    <img
+                      src={item.imageUrl}
+                      alt={item.name}
+                      className="h-full w-full object-cover"
+                      loading="lazy"
+                      decoding="async"
+                      referrerPolicy="no-referrer"
+                    />
+                  </div>
+
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-slate-500">
+                        {item.category}
+                      </span>
+                      <span className={`rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wide ${
+                        item.isPremium
+                          ? 'bg-orange-100 text-orange-700'
+                          : item.isBudget
+                          ? 'bg-emerald-100 text-emerald-700'
+                          : 'bg-blue-100 text-[#3372B2]'
+                      }`}>
+                        {item.quality}
+                      </span>
+                    </div>
+
+                    <div className="mt-2 flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <h5 className="text-base font-black leading-tight text-slate-900">{item.name}</h5>
+                        <p className="mt-1 line-clamp-2 text-xs font-medium leading-relaxed text-slate-500">{item.description}</p>
+                        <p className="mt-1 text-[10px] font-bold uppercase tracking-wide text-slate-400">
+                          {[item.productType, item.quantity].filter(Boolean).join(' - ')}
+                        </p>
+                      </div>
+                      {isInCart && (
+                        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#10B981] text-white shadow-md">
+                          <Check className="h-4 w-4" />
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="mt-3 flex items-end justify-between gap-3">
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Price</p>
+                        <p className="text-2xl font-black text-[#3372B2]">${formatCurrency(displayPrice)}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-3">
+                  {quantity === 0 ? (
+                    <button
+                      type="button"
+                      onClick={() => updateItemQuantity(item, 1)}
+                      className="flex w-full items-center justify-center rounded-2xl bg-[#CC0000] px-4 py-3 text-sm font-black text-white transition-all hover:bg-[#b10000]"
+                      aria-label={`Add ${item.name} to cart`}
+                    >
+                      Add to cart
+                    </button>
+                  ) : (
+                    <QuantityControls
+                      quantity={quantity}
+                      onDecrement={() => updateItemQuantity(item, -1)}
+                      onIncrement={() => updateItemQuantity(item, 1)}
+                      tone="selected"
+                      label="In Cart"
+                      compact
+                    />
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="mt-5 hidden grid-cols-1 gap-4 sm:mt-6 sm:grid sm:grid-cols-2 xl:grid-cols-3">
           {activeItems.map((item) => {
             const quantity = groceryCart[item.id]?.quantity || 0;
             const isInCart = quantity > 0;

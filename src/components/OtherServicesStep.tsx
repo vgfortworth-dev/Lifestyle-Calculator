@@ -96,14 +96,57 @@ function QuantityControls({
   onIncrement,
   tone = 'default',
   label = 'Quantity',
+  compact = false,
 }: {
   quantity: number;
   onDecrement: () => void;
   onIncrement: () => void;
   tone?: 'default' | 'selected';
   label?: string;
+  compact?: boolean;
 }) {
   const isSelected = tone === 'selected';
+
+  if (compact) {
+    return (
+      <div
+        className={`flex items-center justify-between rounded-2xl border px-3 py-2.5 ${
+          isSelected ? 'border-emerald-100 bg-emerald-50' : 'border-slate-100 bg-slate-50'
+        }`}
+      >
+        <p className={`text-[10px] font-black uppercase tracking-widest ${isSelected ? 'text-emerald-700' : 'text-slate-500'}`}>
+          {label}
+        </p>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={onDecrement}
+            className={`flex h-10 w-10 items-center justify-center rounded-full border bg-white transition-all ${
+              isSelected
+                ? 'border-emerald-200 text-emerald-700 hover:bg-emerald-100'
+                : 'border-slate-200 text-slate-600 hover:border-[#10B981] hover:bg-emerald-50 hover:text-emerald-700'
+            }`}
+          >
+            <Minus className="h-4 w-4" />
+          </button>
+          <div className={`min-w-[36px] text-center text-base font-black ${isSelected ? 'text-[#10B981]' : 'text-slate-900'}`}>
+            {quantity}
+          </div>
+          <button
+            type="button"
+            onClick={onIncrement}
+            className={`flex h-10 w-10 items-center justify-center rounded-full border bg-white transition-all ${
+              isSelected
+                ? 'border-emerald-200 text-emerald-700 hover:bg-emerald-100'
+                : 'border-slate-200 text-slate-600 hover:border-[#10B981] hover:bg-emerald-50 hover:text-emerald-700'
+            }`}
+          >
+            <Plus className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -233,20 +276,26 @@ export function OtherServicesStep({ state, onChange }: OtherServicesStepProps) {
 
   return (
     <div className="space-y-6">
-      <div className="rounded-3xl border border-blue-100 bg-blue-50/70 p-6 shadow-sm">
+      <div className="rounded-3xl border border-blue-100 bg-blue-50/70 p-4 shadow-sm sm:p-6">
         <div className="flex items-start gap-4">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white text-[#3372B2] shadow-sm">
+          <div className="hidden h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white text-[#3372B2] shadow-sm sm:flex">
             <Sparkles className="h-6 w-6" />
           </div>
-          <div className="space-y-3">
+          <div className="space-y-2 sm:space-y-3">
             <div>
-              <h3 className="text-2xl font-black text-slate-900">Other Services</h3>
-              <p className="mt-1 text-sm font-bold text-[#3372B2]">
+              <h3 className="text-xl font-black text-slate-900 sm:text-2xl">Other Services</h3>
+              <p className="mt-1 hidden text-sm font-bold text-[#3372B2] sm:block">
                 Shop for fun, events, and memberships the same way you built your grocery cart and closet.
               </p>
+              <p className="mt-1 text-sm font-bold leading-snug text-[#3372B2] sm:hidden">
+                Add events, passes, and memberships like a shopping feed.
+              </p>
             </div>
-            <p className="text-sm font-medium leading-relaxed text-slate-600">
+            <p className="hidden text-sm font-medium leading-relaxed text-slate-600 sm:block">
               Browse events, add them to your cart, adjust quantities, and review how annual or one-time picks turn into a monthly budget.
+            </p>
+            <p className="text-sm font-medium leading-relaxed text-slate-600 sm:hidden">
+              Browse, add, and adjust your fun budget without the extra setup text.
             </p>
           </div>
         </div>
@@ -257,13 +306,13 @@ export function OtherServicesStep({ state, onChange }: OtherServicesStepProps) {
           <div className="min-w-0 flex-1 space-y-3">
             <div>
               <p className="text-xs font-black uppercase tracking-widest text-slate-400">Browse Other Services</p>
-              <h4 className="text-xl font-black text-slate-900">Build a realistic fun and events cart</h4>
+              <h4 className="text-lg font-black text-slate-900 sm:text-xl">Build a realistic fun and events cart</h4>
               <p className="mt-2 text-sm font-medium text-slate-500">
                 Add one for each person, ticket, pass, or membership you want in your lifestyle budget.
               </p>
             </div>
-            <div className="-mx-1 overflow-visible pb-1 sm:overflow-x-auto lg:overflow-visible">
-              <div className="flex flex-wrap gap-2 px-1 sm:min-w-max sm:flex-nowrap sm:gap-3 lg:min-w-0 lg:flex-wrap">
+            <div className="-mx-4 overflow-x-auto pb-1 sm:-mx-1 sm:overflow-visible">
+              <div className="flex min-w-max gap-2 px-4 sm:flex-wrap sm:gap-3 sm:px-1 lg:min-w-0">
                 {OTHER_SERVICES_CATEGORIES.map((category) => {
                   const isActive = category.id === activeCategory;
                   return (
@@ -314,7 +363,92 @@ export function OtherServicesStep({ state, onChange }: OtherServicesStepProps) {
           </div>
         )}
 
-        <div className="mt-5 grid grid-cols-1 gap-4 md:mt-6 md:grid-cols-2 xl:grid-cols-3">
+        <div className="mt-4 space-y-3 sm:hidden">
+          {activeCategoryData.cards.map((card) => {
+            const groupHasSelection = card.options.some((option) => (otherSelections[option.id]?.quantity || 0) > 0);
+            const groupEmoji = getOtherServicesCardEmoji(card);
+
+            return (
+              <div
+                key={`${card.id}-mobile`}
+                className={`rounded-[28px] border bg-gradient-to-b from-[#F8FEFD] via-white to-white p-3 shadow-sm ${
+                  groupHasSelection ? 'border-[#6CE6D1]' : 'border-[#8AEBDD]'
+                }`}
+              >
+                <div className="flex items-center gap-3 border-b border-[#DFF7F1] pb-3">
+                  <StableEmoji symbol={groupEmoji} className="text-[1.9rem] leading-none" />
+                  <div className="min-w-0">
+                    <h5 className="text-base font-extrabold uppercase leading-tight text-[#159A8C]">
+                      {card.title}
+                    </h5>
+                    {card.priceHint && (
+                      <p className="mt-1 text-[10px] font-extrabold uppercase tracking-[0.18em] text-[#10B981]">{card.priceHint}</p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="mt-3 space-y-2">
+                  {card.options.map((offer) => {
+                    const quantity = otherSelections[offer.id]?.quantity || 0;
+                    const isInCart = quantity > 0;
+                    const monthlyCost = Number((offer.price / 12).toFixed(2));
+
+                    return (
+                      <div
+                        key={`${offer.id}-mobile`}
+                        className={`rounded-[22px] border bg-[#EEF4FB] p-3 ${
+                          isInCart ? 'border-[#9FE7D8] ring-2 ring-emerald-100' : 'border-[#D7E3F1]'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <h6 className="text-sm font-black leading-tight text-slate-900">{offer.name}</h6>
+                            <p className="mt-1 line-clamp-2 text-xs font-medium leading-relaxed text-slate-500">{offer.description}</p>
+                            <p className="mt-2 text-2xl font-black leading-none text-[#3372B2]">
+                              ${formatDisplayPrice(offer.price)}
+                            </p>
+                            <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                              about ${formatCurrency(monthlyCost)}/mo
+                            </p>
+                          </div>
+                          {isInCart && (
+                            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#10B981] text-white shadow-md">
+                              <Check className="h-4 w-4" />
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="mt-3">
+                          {quantity === 0 ? (
+                            <button
+                              type="button"
+                              onClick={() => updateOptionQuantity(offer, card.title, activeCategoryData.label, card.icon, 1)}
+                              className="flex w-full items-center justify-center rounded-2xl bg-[#CC0000] px-4 py-3 text-sm font-black text-white transition-all hover:bg-[#b10000]"
+                              aria-label={`Add ${offer.name} to cart`}
+                            >
+                              Add to cart
+                            </button>
+                          ) : (
+                            <QuantityControls
+                              quantity={quantity}
+                              onDecrement={() => updateOptionQuantity(offer, card.title, activeCategoryData.label, card.icon, -1)}
+                              onIncrement={() => updateOptionQuantity(offer, card.title, activeCategoryData.label, card.icon, 1)}
+                              tone="selected"
+                              label="In Cart"
+                              compact
+                            />
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="mt-5 hidden grid-cols-1 gap-4 md:mt-6 md:grid md:grid-cols-2 xl:grid-cols-3">
           {activeCategoryData.cards.map((card) => {
             const groupHasSelection = card.options.some((option) => (otherSelections[option.id]?.quantity || 0) > 0);
             const groupEmoji = getOtherServicesCardEmoji(card);

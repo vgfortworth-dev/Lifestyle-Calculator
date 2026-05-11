@@ -1212,7 +1212,7 @@ export default function App() {
         </div>
       </ModalShell>
 
-      <div className="relative min-h-screen bg-slate-50 pb-44 font-sans text-slate-900 sm:pb-32">
+      <div className="relative min-h-screen bg-slate-50 pb-52 font-sans text-slate-900 sm:pb-32">
         <Nav
           sessionEmail={session.user.email}
           stepLabel={showHistory ? 'History' : safeSteps[state.currentStep]}
@@ -1765,20 +1765,38 @@ function FeedbackTool({ stepName }: { stepName: string }) {
   };
 
   return (
-    <div
-      id="feedback-tool"
-      className="fixed bottom-24 right-3 z-[200] sm:bottom-auto sm:right-6 sm:top-1/2 sm:-translate-y-1/2"
-    >
-      <button
-        onClick={openFeedbackForm}
-        className="flex items-center gap-2 rounded-full bg-slate-900 px-3 py-2.5 text-white shadow-2xl transition-all hover:bg-orange-500 sm:flex-col sm:gap-1 sm:p-4"
-        aria-label={`Open anonymous feedback form for ${stepName}`}
-        title="Open anonymous feedback form"
+    <>
+      <div
+        id="feedback-tool-mobile"
+        className="fixed right-0 z-[200] sm:hidden"
+        style={{ bottom: 'calc(7.75rem + env(safe-area-inset-bottom))' }}
       >
-        <MessageSquare className="h-4 w-4 sm:h-6 sm:w-6" />
-        <span className="text-[10px] font-bold uppercase sm:text-[10px]">Feedback</span>
-      </button>
-    </div>
+        <button
+          onClick={openFeedbackForm}
+          className="flex items-center gap-1 rounded-l-full rounded-r-none bg-slate-900 px-2.5 py-2 text-white shadow-2xl transition-all hover:bg-orange-500"
+          aria-label={`Open anonymous feedback form for ${stepName}`}
+          title="Open anonymous feedback form"
+        >
+          <MessageSquare className="h-3.5 w-3.5" />
+          <span className="text-[9px] font-bold uppercase tracking-wide">Feedback</span>
+        </button>
+      </div>
+
+      <div
+        id="feedback-tool"
+        className="fixed right-6 top-1/2 z-[200] hidden -translate-y-1/2 sm:block"
+      >
+        <button
+          onClick={openFeedbackForm}
+          className="flex flex-col items-center gap-1 rounded-full bg-slate-900 p-4 text-white shadow-2xl transition-all hover:bg-orange-500"
+          aria-label={`Open anonymous feedback form for ${stepName}`}
+          title="Open anonymous feedback form"
+        >
+          <MessageSquare className="h-6 w-6" />
+          <span className="text-[10px] font-bold uppercase">Feedback</span>
+        </button>
+      </div>
+    </>
   );
 }
 
