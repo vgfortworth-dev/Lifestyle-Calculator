@@ -301,7 +301,7 @@ export function OtherServicesStep({ state, onChange }: OtherServicesStepProps) {
         </div>
       </div>
 
-      <section className="overflow-hidden rounded-3xl border border-slate-100 bg-white p-4 shadow-sm sm:p-6">
+      <section className="-mx-2 overflow-hidden bg-transparent px-2 py-0 shadow-none sm:mx-0 sm:rounded-3xl sm:border sm:border-slate-100 sm:bg-white sm:p-6 sm:shadow-sm">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="min-w-0 flex-1 space-y-3">
             <div>
@@ -311,8 +311,8 @@ export function OtherServicesStep({ state, onChange }: OtherServicesStepProps) {
                 Add one for each person, ticket, pass, or membership you want in your lifestyle budget.
               </p>
             </div>
-            <div className="-mx-4 overflow-x-auto pb-1 sm:-mx-1 sm:overflow-visible">
-              <div className="flex min-w-max gap-2 px-4 sm:flex-wrap sm:gap-3 sm:px-1 lg:min-w-0">
+            <div className="-mx-2 overflow-x-auto pb-1 sm:-mx-1 sm:overflow-visible">
+              <div className="flex min-w-max gap-2 px-2 sm:flex-wrap sm:gap-3 sm:px-1 lg:min-w-0">
                 {OTHER_SERVICES_CATEGORIES.map((category) => {
                   const isActive = category.id === activeCategory;
                   return (
@@ -371,11 +371,11 @@ export function OtherServicesStep({ state, onChange }: OtherServicesStepProps) {
             return (
               <div
                 key={`${card.id}-mobile`}
-                className={`rounded-[28px] border bg-gradient-to-b from-[#F8FEFD] via-white to-white p-3 shadow-sm ${
+                className={`border-b border-slate-200 bg-transparent px-1 pb-3 pt-1 last:border-b-0 ${
                   groupHasSelection ? 'border-[#6CE6D1]' : 'border-[#8AEBDD]'
                 }`}
               >
-                <div className="flex items-center gap-3 border-b border-[#DFF7F1] pb-3">
+                <div className="flex items-center gap-3 pb-2">
                   <StableEmoji symbol={groupEmoji} className="text-[1.9rem] leading-none" />
                   <div className="min-w-0">
                     <h5 className="text-base font-extrabold uppercase leading-tight text-[#159A8C]">
@@ -387,7 +387,7 @@ export function OtherServicesStep({ state, onChange }: OtherServicesStepProps) {
                   </div>
                 </div>
 
-                <div className="mt-3 space-y-2">
+                <div className="mt-2 space-y-2">
                   {card.options.map((offer) => {
                     const quantity = otherSelections[offer.id]?.quantity || 0;
                     const isInCart = quantity > 0;
@@ -396,15 +396,15 @@ export function OtherServicesStep({ state, onChange }: OtherServicesStepProps) {
                     return (
                       <div
                         key={`${offer.id}-mobile`}
-                        className={`rounded-[22px] border bg-[#EEF4FB] p-3 ${
-                          isInCart ? 'border-[#9FE7D8] ring-2 ring-emerald-100' : 'border-[#D7E3F1]'
+                        className={`rounded-[20px] border bg-white px-3 py-2.5 ${
+                          isInCart ? 'border-[#9FE7D8] bg-emerald-50/20 ring-1 ring-emerald-100' : 'border-slate-200'
                         }`}
                       >
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0">
                             <h6 className="text-sm font-black leading-tight text-slate-900">{offer.name}</h6>
-                            <p className="mt-1 line-clamp-2 text-xs font-medium leading-relaxed text-slate-500">{offer.description}</p>
-                            <p className="mt-2 text-2xl font-black leading-none text-[#3372B2]">
+                            <p className="mt-0.5 line-clamp-2 text-[11px] font-medium leading-relaxed text-slate-500">{offer.description}</p>
+                            <p className="mt-1.5 text-xl font-black leading-none text-[#3372B2]">
                               ${formatDisplayPrice(offer.price)}
                             </p>
                             <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-slate-400">
@@ -418,12 +418,12 @@ export function OtherServicesStep({ state, onChange }: OtherServicesStepProps) {
                           )}
                         </div>
 
-                        <div className="mt-3">
+                        <div className="mt-2.5">
                           {quantity === 0 ? (
                             <button
                               type="button"
                               onClick={() => updateOptionQuantity(offer, card.title, activeCategoryData.label, card.icon, 1)}
-                              className="flex w-full items-center justify-center rounded-2xl bg-[#CC0000] px-4 py-3 text-sm font-black text-white transition-all hover:bg-[#b10000]"
+                              className="flex w-full items-center justify-center rounded-full bg-[#CC0000] px-4 py-2.5 text-sm font-black text-white transition-all hover:bg-[#b10000]"
                               aria-label={`Add ${offer.name} to cart`}
                             >
                               Add to cart
