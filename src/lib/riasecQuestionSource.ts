@@ -1,11 +1,11 @@
 import { supabase } from './supabase';
-import { RIASEC_QUESTIONS } from './riasecQuestions';
 import { RiasecCategory, RiasecQuestion } from '../types/riasec';
 import { buildCloudinaryImageUrl } from './cloudinary';
 
 const RIASEC_CATEGORIES: RiasecCategory[] = ['R', 'I', 'A', 'S', 'E', 'C'];
 const RIASEC_TABLE = 'riasec_questions';
 const RIASEC_SELECT_COLUMNS = 'id,prompt,category,display_order,image_path,alt_text,is_active,cloudinary_public_id';
+const REQUIRED_RIASEC_QUESTION_COUNT = 30;
 
 type RiasecQuestionRow = {
   id: string | number;
@@ -29,22 +29,19 @@ type RiasecQueryError = {
 function logRiasecQueryDiagnostic({
   table,
   error,
-  usedFallback,
-  queryVariant,
+  questionCount,
 }: {
   table: string;
   error?: RiasecQueryError;
-  usedFallback: boolean;
-  queryVariant: 'display_order_with_is_active' | 'display_order_without_is_active';
+  questionCount?: number | null;
 }) {
   const payload = {
     table,
-    queryVariant,
     errorCode: error?.code || null,
     errorMessage: error?.message || null,
     errorDetails: error?.details || null,
     errorHint: error?.hint || null,
-    usedFallback,
+    questionCount: questionCount ?? null,
   };
 
   if (!import.meta.env.DEV) {
@@ -140,77 +137,48 @@ function mapQuestionRow(row: RiasecQuestionRow): RiasecQuestion | null {
   };
 }
 
-async function queryRiasecQuestions(withIsActiveFilter: boolean) {
-  let query = supabase
+async function queryRiasecQuestions() {
+  return supabase
     .from(RIASEC_TABLE)
     .select(RIASEC_SELECT_COLUMNS)
+    .eq('is_active', true)
     .order('display_order', { ascending: true });
-
-  if (withIsActiveFilter) {
-    query = query.eq('is_active', true);
-  }
-
-  return query;
 }
 
-export async function loadRiasecQuestions(): Promise<{ questions: RiasecQuestion[]; source: 'supabase' | 'fallback' }> {
-  const attempts: Array<{
-    withIsActiveFilter: boolean;
-    queryVariant: 'display_order_with_is_active' | 'display_order_without_is_active';
-  }> = [
-    { withIsActiveFilter: true, queryVariant: 'display_order_with_is_active' },
-    { withIsActiveFilter: false, queryVariant: 'display_order_without_is_active' },
-  ];
-
-  let lastError: RiasecQueryError = null;
-
+export async function loadRiasecQuestions(): Promise<{ questions: RiasecQuestion[]; source: 'supabase' | 'unavailable' }> {
   try {
-    for (const attempt of attempts) {
-      const { data, error } = await queryRiasecQuestions(attempt.withIsActiveFilter);
+    const { data, error } = await queryRiasecQuestions();
 
-      if (error) {
-        lastError = error;
-        logRiasecQueryDiagnostic({
-          table: RIASEC_TABLE,
-          queryVariant: attempt.queryVariant,
-          error,
-          usedFallback: true,
-        });
-        continue;
-      }
-
-      const questions = (data || [])
-        .map((row) => mapQuestionRow(row as RiasecQuestionRow))
-        .filter((question): question is RiasecQuestion => question !== null)
-        .sort((a, b) => (a.displayOrder ?? Number.MAX_SAFE_INTEGER) - (b.displayOrder ?? Number.MAX_SAFE_INTEGER));
-
-      if (questions.length > 0) {
-        if (import.meta.env.DEV) {
-          console.info(`[RIASEC] Loaded ${questions.length} questions from Supabase using ${attempt.queryVariant}.`);
-        }
-        logRiasecQueryDiagnostic({
-          table: RIASEC_TABLE,
-          queryVariant: attempt.queryVariant,
-          usedFallback: false,
-        });
-        return { questions, source: 'supabase' };
-      }
+    if (error) {
+      logRiasecQueryDiagnostic({
+        table: RIASEC_TABLE,
+        error,
+      });
+      return { questions: [], source: 'unavailable' };
     }
+
+    const questions = (data || [])
+      .map((row) => mapQuestionRow(row as RiasecQuestionRow))
+      .filter((question): question is RiasecQuestion => question !== null)
+      .sort((a, b) => (a.displayOrder ?? Number.MAX_SAFE_INTEGER) - (b.displayOrder ?? Number.MAX_SAFE_INTEGER));
+
+    if (import.meta.env.DEV) {
+      console.info(`[RIASEC] Loaded ${questions.length} active question(s) from Supabase.`);
+    }
+    logRiasecQueryDiagnostic({
+      table: RIASEC_TABLE,
+      questionCount: questions.length,
+    });
+
+    if (questions.length !== REQUIRED_RIASEC_QUESTION_COUNT) {
+      return { questions: [], source: 'unavailable' };
+    }
+
+    return { questions, source: 'supabase' };
   } catch (error) {
-    lastError = error as RiasecQueryError;
     if (import.meta.env.DEV) {
       console.error('[RIASEC] Unexpected question loading failure.', error);
     }
+    return { questions: [], source: 'unavailable' };
   }
-
-  if (import.meta.env.DEV) {
-    console.info(`[RIASEC] Loaded ${RIASEC_QUESTIONS.length} questions from fallback.`);
-  }
-  logRiasecQueryDiagnostic({
-    table: RIASEC_TABLE,
-    queryVariant: 'display_order_with_is_active',
-    error: lastError,
-    usedFallback: true,
-  });
-  return { questions: RIASEC_QUESTIONS, source: 'fallback' };
 }

@@ -19,7 +19,7 @@ export function RiasecQuiz({ onTryLifestyle }: RiasecQuizProps) {
   const [result, setResult] = useState<RiasecResult | null>(null);
   const [questions, setQuestions] = useState<RiasecQuestion[]>([]);
   const [isLoadingQuestions, setIsLoadingQuestions] = useState(true);
-  const [questionSource, setQuestionSource] = useState<'supabase' | 'fallback' | null>(null);
+  const [isQuizUnavailable, setIsQuizUnavailable] = useState(false);
   const currentQuestion = questions[currentQuestionIndex];
   const currentAnswer = currentQuestion ? answers[currentQuestion.id] : undefined;
   const progressQuestion = Math.min(currentQuestionIndex + 1, questions.length);
@@ -41,7 +41,7 @@ export function RiasecQuiz({ onTryLifestyle }: RiasecQuizProps) {
       if (!isActive) return;
 
       setQuestions(loaded.questions);
-      setQuestionSource(loaded.source);
+      setIsQuizUnavailable(loaded.source !== 'supabase');
       setIsLoadingQuestions(false);
 
       if (import.meta.env.DEV) {
@@ -128,14 +128,9 @@ export function RiasecQuiz({ onTryLifestyle }: RiasecQuizProps) {
           </div>
         )}
 
-        {hasStarted && !result && !isLoadingQuestions && currentQuestion && (
+        {hasStarted && !result && !isLoadingQuestions && !isQuizUnavailable && currentQuestion && (
           <div className="space-y-5">
             <RiasecProgress current={progressQuestion} total={questions.length} />
-            {questionSource === 'fallback' && (
-              <div className="rounded-2xl border border-amber-100 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-800">
-                Using backup RIASEC questions because the Supabase question set was unavailable.
-              </div>
-            )}
             <RiasecQuestionCard
               question={currentQuestion}
               selectedValue={currentAnswer}
@@ -151,10 +146,10 @@ export function RiasecQuiz({ onTryLifestyle }: RiasecQuizProps) {
           </div>
         )}
 
-        {hasStarted && !result && !isLoadingQuestions && !currentQuestion && (
+        {hasStarted && !result && !isLoadingQuestions && (isQuizUnavailable || !currentQuestion) && (
           <div className="rounded-3xl border border-red-100 bg-white p-8 shadow-xl">
             <p className="text-center text-sm font-bold text-red-600">
-              No active RIASEC questions were available.
+              The RIASEC quiz is currently unavailable. Please try again later.
             </p>
           </div>
         )}
