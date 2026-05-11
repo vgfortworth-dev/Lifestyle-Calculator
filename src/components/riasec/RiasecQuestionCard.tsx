@@ -40,7 +40,7 @@ export function RiasecQuestionCard({ question, selectedValue, onAnswer }: Riasec
 
   return (
     <div className="space-y-6">
-      <div className="relative h-[300px] overflow-hidden rounded-3xl border border-slate-100 bg-white shadow-xl sm:h-[420px] lg:h-[480px]">
+      <div className="relative h-[220px] overflow-hidden rounded-3xl border border-slate-100 bg-white shadow-xl sm:h-[420px] lg:h-[480px]">
         {!imageLoaded && (
           <div className="absolute inset-0 animate-pulse bg-gradient-to-br from-slate-100 via-slate-50 to-slate-100" />
         )}
@@ -77,32 +77,32 @@ export function RiasecQuestionCard({ question, selectedValue, onAnswer }: Riasec
         )}
       </div>
 
-      <div className="space-y-6 rounded-3xl border border-slate-100 bg-white p-6 shadow-xl sm:p-8">
-      <div className="space-y-2 text-center">
-        <p className="text-xs font-black uppercase tracking-widest text-[#3372B2]">How much would you enjoy this?</p>
-        <h2 className="mx-auto max-w-2xl text-2xl font-black leading-tight text-slate-900 sm:text-3xl">{question.prompt}</h2>
-      </div>
+      <div className="space-y-5 rounded-3xl border border-slate-100 bg-white p-5 shadow-xl sm:space-y-6 sm:p-8">
+        <div className="space-y-2 text-center">
+          <p className="text-xs font-black uppercase tracking-widest text-[#3372B2]">How much would you enjoy this?</p>
+          <h2 className="mx-auto max-w-2xl text-xl font-black leading-tight text-slate-900 sm:text-3xl">{question.prompt}</h2>
+        </div>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        {ANSWER_OPTIONS.map((option) => {
-          const isSelected = selectedValue === option.value;
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          {ANSWER_OPTIONS.map((option) => {
+            const isSelected = selectedValue === option.value;
 
-          return (
-            <button
-              key={option.value}
-              onClick={() => onAnswer(option.value)}
-              className={`rounded-2xl border-2 p-5 text-left transition-all ${
-                isSelected
-                  ? 'border-[#10B981] bg-emerald-50/60 shadow-sm'
-                  : 'border-slate-100 bg-white hover:border-[#D6E4F0] hover:bg-[#F3F7FB] hover:shadow-[0_2px_6px_rgba(0,0,0,0.05)]'
-              }`}
-            >
-              <p className="font-black text-slate-900">{option.label}</p>
-              <p className="mt-1 text-sm font-medium leading-relaxed text-slate-500">{option.description}</p>
-            </button>
-          );
-        })}
-      </div>
+            return (
+              <button
+                key={option.value}
+                onClick={() => onAnswer(option.value)}
+                className={`rounded-2xl border-2 p-4 text-left transition-all sm:p-5 ${
+                  isSelected
+                    ? 'border-[#10B981] bg-emerald-50/60 shadow-sm'
+                    : 'border-slate-100 bg-white hover:border-[#D6E4F0] hover:bg-[#F3F7FB] hover:shadow-[0_2px_6px_rgba(0,0,0,0.05)]'
+                }`}
+              >
+                <p className="font-black text-slate-900">{option.label}</p>
+                <p className="mt-1 text-sm font-medium leading-relaxed text-slate-500">{option.description}</p>
+              </button>
+            );
+          })}
+        </div>
       </div>
     </div>
   );

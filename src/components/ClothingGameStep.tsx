@@ -66,18 +66,18 @@ function QuantityControls({
 
   return (
     <div
-      className={`flex items-center justify-between rounded-2xl border px-3 py-3 ${
+      className={`flex flex-col gap-3 rounded-2xl border px-3 py-3 sm:flex-row sm:items-center sm:justify-between ${
         isSelected ? 'border-emerald-100 bg-emerald-50' : 'border-slate-100 bg-slate-50'
       }`}
     >
       <p className={`text-xs font-black uppercase tracking-widest ${isSelected ? 'text-emerald-700' : 'text-slate-500'}`}>
         {label}
       </p>
-      <div className="flex items-center gap-2">
+      <div className="flex w-full items-center justify-between gap-2 sm:w-auto sm:justify-start">
         <button
           type="button"
           onClick={onDecrement}
-          className={`flex h-10 w-10 items-center justify-center rounded-full border bg-white transition-all ${
+          className={`flex h-11 w-11 items-center justify-center rounded-full border bg-white transition-all sm:h-10 sm:w-10 ${
             isSelected
               ? 'border-emerald-200 text-emerald-700 hover:bg-emerald-100'
               : 'border-slate-200 text-slate-600 hover:border-[#10B981] hover:bg-emerald-50 hover:text-emerald-700'
@@ -85,13 +85,13 @@ function QuantityControls({
         >
           <Minus className="h-4 w-4" />
         </button>
-        <div className={`min-w-[44px] text-center text-lg font-black ${isSelected ? 'text-[#10B981]' : 'text-slate-900'}`}>
+        <div className={`min-w-[52px] text-center text-lg font-black ${isSelected ? 'text-[#10B981]' : 'text-slate-900'}`}>
           {quantity}
         </div>
         <button
           type="button"
           onClick={onIncrement}
-          className={`flex h-10 w-10 items-center justify-center rounded-full border bg-white transition-all ${
+          className={`flex h-11 w-11 items-center justify-center rounded-full border bg-white transition-all sm:h-10 sm:w-10 ${
             isSelected
               ? 'border-emerald-200 text-emerald-700 hover:bg-emerald-100'
               : 'border-slate-200 text-slate-600 hover:border-[#10B981] hover:bg-emerald-50 hover:text-emerald-700'
@@ -232,15 +232,15 @@ export function ClothingGameStep({
         </div>
       </div>
 
-      <section className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm">
+      <section className="rounded-3xl border border-slate-100 bg-white p-4 shadow-sm sm:p-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="space-y-3">
             <div>
               <p className="text-xs font-black uppercase tracking-widest text-slate-400">Browse Clothing</p>
               <h4 className="text-xl font-black text-slate-900">Pick items you would actually buy</h4>
             </div>
-            <div className="-mx-1 overflow-x-auto pb-1">
-              <div className="flex min-w-max gap-3 px-1">
+            <div className="-mx-1 overflow-visible pb-1 sm:overflow-x-auto">
+              <div className="flex flex-wrap gap-2 px-1 sm:min-w-max sm:flex-nowrap sm:gap-3">
                 {CLOSET_CATEGORIES.map((tab) => {
                   const isActive = tab.id === activeCategory;
                   return (
@@ -278,7 +278,7 @@ export function ClothingGameStep({
           </button>
         </div>
 
-        <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="mt-5 grid grid-cols-1 gap-4 sm:mt-6 sm:grid-cols-2 xl:grid-cols-3">
           {activeItems.map((item) => {
             const quantity = clothingCloset[item.id]?.quantity || 0;
             const isInCloset = quantity > 0;
@@ -286,13 +286,13 @@ export function ClothingGameStep({
             return (
               <div
                 key={item.id}
-                className={`relative flex h-full flex-col overflow-hidden rounded-3xl border-2 bg-white p-4 text-left transition-all ${
+                className={`relative flex h-full flex-col overflow-hidden rounded-3xl border-2 bg-white p-3 text-left transition-all sm:p-4 ${
                   isInCloset
                     ? 'border-[#10B981] bg-emerald-50/20 ring-2 ring-emerald-50 shadow-[0_4px_16px_rgba(16,185,129,0.12)]'
                     : 'border-slate-100 hover:border-[#D6E4F0] hover:bg-[#F3F7FB] hover:shadow-[0_2px_6px_rgba(0,0,0,0.05)]'
                 } ${lastChangedItemId === item.id ? 'scale-[1.01]' : ''}`}
               >
-                <div className="mb-4 h-48 overflow-hidden rounded-2xl bg-slate-100">
+                <div className="mb-3 h-32 overflow-hidden rounded-2xl bg-slate-100 sm:mb-4 sm:h-48">
                   <img
                     src={item.image_url}
                     alt={item.name}
@@ -305,7 +305,7 @@ export function ClothingGameStep({
 
                 <div className="flex flex-1 flex-col space-y-2">
                   <div className="flex items-start justify-between gap-3">
-                    <h5 className="text-base font-black text-slate-900">{item.name}</h5>
+                    <h5 className="text-base font-black text-slate-900 sm:text-lg">{item.name}</h5>
                     {isInCloset && (
                       <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#10B981] text-white shadow-md">
                         <Check className="h-4 w-4" />
@@ -315,7 +315,7 @@ export function ClothingGameStep({
                   <p className="min-h-[40px] text-sm font-medium leading-relaxed text-slate-500">{item.description}</p>
                   <div className="flex items-end justify-between gap-3 pt-2">
                     <div>
-                      <p className="text-xl font-black text-[#3372B2]">${formatCurrency(item.price)}</p>
+                      <p className="text-xl font-black text-[#3372B2] sm:text-2xl">${formatCurrency(item.price)}</p>
                       <p className="text-xs font-bold uppercase tracking-widest text-slate-400">
                         lasts about {item.lifespan_months} months
                       </p>

@@ -41,18 +41,18 @@ function QuantityControls({
 
   return (
     <div
-      className={`flex items-center justify-between rounded-2xl border px-3 py-3 ${
+      className={`flex flex-col gap-3 rounded-2xl border px-3 py-3 sm:flex-row sm:items-center sm:justify-between ${
         isSelected ? 'border-emerald-100 bg-emerald-50' : 'border-slate-100 bg-slate-50'
       }`}
     >
       <p className={`text-xs font-black uppercase tracking-widest ${isSelected ? 'text-emerald-700' : 'text-slate-500'}`}>
         {label}
       </p>
-      <div className="flex items-center gap-2">
+      <div className="flex w-full items-center justify-between gap-2 sm:w-auto sm:justify-start">
         <button
           type="button"
           onClick={onDecrement}
-          className={`flex h-10 w-10 items-center justify-center rounded-full border bg-white transition-all ${
+          className={`flex h-11 w-11 items-center justify-center rounded-full border bg-white transition-all sm:h-10 sm:w-10 ${
             isSelected
               ? 'border-emerald-200 text-emerald-700 hover:bg-emerald-100'
               : 'border-slate-200 text-slate-600 hover:border-[#10B981] hover:bg-emerald-50 hover:text-emerald-700'
@@ -60,13 +60,13 @@ function QuantityControls({
         >
           <Minus className="h-4 w-4" />
         </button>
-        <div className={`min-w-[44px] text-center text-lg font-black ${isSelected ? 'text-[#10B981]' : 'text-slate-900'}`}>
+        <div className={`min-w-[52px] text-center text-lg font-black ${isSelected ? 'text-[#10B981]' : 'text-slate-900'}`}>
           {quantity}
         </div>
         <button
           type="button"
           onClick={onIncrement}
-          className={`flex h-10 w-10 items-center justify-center rounded-full border bg-white transition-all ${
+          className={`flex h-11 w-11 items-center justify-center rounded-full border bg-white transition-all sm:h-10 sm:w-10 ${
             isSelected
               ? 'border-emerald-200 text-emerald-700 hover:bg-emerald-100'
               : 'border-slate-200 text-slate-600 hover:border-[#10B981] hover:bg-emerald-50 hover:text-emerald-700'
@@ -179,15 +179,15 @@ export function GrocerySelectionStep({
         </div>
       </div>
 
-      <section className="overflow-hidden rounded-3xl border border-slate-100 bg-white p-6 shadow-sm">
+      <section className="overflow-hidden rounded-3xl border border-slate-100 bg-white p-4 shadow-sm sm:p-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="min-w-0 flex-1 space-y-3">
             <div>
               <p className="text-xs font-black uppercase tracking-widest text-slate-400">Browse Groceries</p>
               <h4 className="text-xl font-black text-slate-900">Build a realistic weekly cart</h4>
             </div>
-            <div className="-mx-1 overflow-x-auto pb-1 lg:overflow-visible">
-              <div className="flex min-w-max gap-3 px-1 lg:min-w-0 lg:flex-wrap">
+            <div className="-mx-1 overflow-visible pb-1 sm:overflow-x-auto lg:overflow-visible">
+              <div className="flex flex-wrap gap-2 px-1 sm:min-w-max sm:flex-nowrap sm:gap-3 lg:min-w-0 lg:flex-wrap">
                 {GROCERY_BROWSE_CATEGORIES.map((tab) => {
                   const isActive = tab === activeCategory;
                   return (
@@ -225,7 +225,7 @@ export function GrocerySelectionStep({
           </button>
         </div>
 
-        <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="mt-5 grid grid-cols-1 gap-4 sm:mt-6 sm:grid-cols-2 xl:grid-cols-3">
           {activeItems.map((item) => {
             const quantity = groceryCart[item.id]?.quantity || 0;
             const isInCart = quantity > 0;
@@ -234,13 +234,13 @@ export function GrocerySelectionStep({
             return (
               <div
                 key={item.id}
-                className={`relative flex h-full min-w-0 flex-col overflow-hidden rounded-3xl border-2 bg-white p-4 text-left transition-all ${
+                className={`relative flex h-full min-w-0 flex-col overflow-hidden rounded-3xl border-2 bg-white p-3 text-left transition-all sm:p-4 ${
                   isInCart
                     ? 'border-[#10B981] bg-emerald-50/20 ring-2 ring-emerald-50 shadow-[0_4px_16px_rgba(16,185,129,0.12)]'
                     : 'border-slate-100 hover:border-[#D6E4F0] hover:bg-[#F3F7FB] hover:shadow-[0_2px_6px_rgba(0,0,0,0.05)]'
                 } ${lastChangedItemId === item.id ? 'scale-[1.01]' : ''}`}
               >
-                <div className="mb-4 h-48 overflow-hidden rounded-2xl bg-slate-100">
+                <div className="mb-3 h-32 overflow-hidden rounded-2xl bg-slate-100 sm:mb-4 sm:h-48">
                   <img
                     src={item.imageUrl}
                     alt={item.name}
@@ -251,7 +251,7 @@ export function GrocerySelectionStep({
                   />
                 </div>
 
-                <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+                <div className="rounded-2xl border border-slate-100 bg-slate-50 p-3 sm:p-4">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="rounded-full bg-white px-3 py-1 text-[11px] font-black uppercase tracking-wide text-slate-500 shadow-sm">
                       {item.category}
@@ -266,8 +266,8 @@ export function GrocerySelectionStep({
                       {item.quality}
                     </span>
                   </div>
-                  <div className="mt-4 space-y-1">
-                    <h5 className="text-lg font-black text-slate-900">{item.name}</h5>
+                  <div className="mt-3 space-y-1 sm:mt-4">
+                    <h5 className="text-base font-black text-slate-900 sm:text-lg">{item.name}</h5>
                     <p className="text-sm font-medium leading-relaxed text-slate-500">{item.description}</p>
                     <p className="text-xs font-bold uppercase tracking-widest text-slate-400">
                       {[item.productType, item.quantity].filter(Boolean).join(' - ')}
@@ -275,11 +275,11 @@ export function GrocerySelectionStep({
                   </div>
                 </div>
 
-                <div className="mt-4 flex flex-1 flex-col justify-between gap-4">
+                <div className="mt-3 flex flex-1 flex-col justify-between gap-3 sm:mt-4 sm:gap-4">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <p className="text-xs font-black uppercase tracking-widest text-slate-400">Average price</p>
-                      <p className="mt-1 text-3xl font-black text-[#3372B2]">${formatCurrency(displayPrice)}</p>
+                      <p className="mt-1 text-2xl font-black text-[#3372B2] sm:text-3xl">${formatCurrency(displayPrice)}</p>
                     </div>
                     {isInCart && (
                       <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#10B981] text-white shadow-md">

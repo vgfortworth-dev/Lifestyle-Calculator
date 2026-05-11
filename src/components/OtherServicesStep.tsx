@@ -107,18 +107,18 @@ function QuantityControls({
 
   return (
     <div
-      className={`flex items-center justify-between rounded-2xl border px-3 py-3 ${
+      className={`flex flex-col gap-3 rounded-2xl border px-3 py-3 sm:flex-row sm:items-center sm:justify-between ${
         isSelected ? 'border-emerald-100 bg-emerald-50' : 'border-slate-100 bg-slate-50'
       }`}
     >
       <p className={`text-xs font-black uppercase tracking-widest ${isSelected ? 'text-emerald-700' : 'text-slate-500'}`}>
         {label}
       </p>
-      <div className="flex items-center gap-2">
+      <div className="flex w-full items-center justify-between gap-2 sm:w-auto sm:justify-start">
         <button
           type="button"
           onClick={onDecrement}
-          className={`flex h-10 w-10 items-center justify-center rounded-full border bg-white transition-all ${
+          className={`flex h-11 w-11 items-center justify-center rounded-full border bg-white transition-all sm:h-10 sm:w-10 ${
             isSelected
               ? 'border-emerald-200 text-emerald-700 hover:bg-emerald-100'
               : 'border-slate-200 text-slate-600 hover:border-[#10B981] hover:bg-emerald-50 hover:text-emerald-700'
@@ -126,13 +126,13 @@ function QuantityControls({
         >
           <Minus className="h-4 w-4" />
         </button>
-        <div className={`min-w-[44px] text-center text-lg font-black ${isSelected ? 'text-[#10B981]' : 'text-slate-900'}`}>
+        <div className={`min-w-[52px] text-center text-lg font-black ${isSelected ? 'text-[#10B981]' : 'text-slate-900'}`}>
           {quantity}
         </div>
         <button
           type="button"
           onClick={onIncrement}
-          className={`flex h-10 w-10 items-center justify-center rounded-full border bg-white transition-all ${
+          className={`flex h-11 w-11 items-center justify-center rounded-full border bg-white transition-all sm:h-10 sm:w-10 ${
             isSelected
               ? 'border-emerald-200 text-emerald-700 hover:bg-emerald-100'
               : 'border-slate-200 text-slate-600 hover:border-[#10B981] hover:bg-emerald-50 hover:text-emerald-700'
@@ -252,7 +252,7 @@ export function OtherServicesStep({ state, onChange }: OtherServicesStepProps) {
         </div>
       </div>
 
-      <section className="overflow-hidden rounded-3xl border border-slate-100 bg-white p-6 shadow-sm">
+      <section className="overflow-hidden rounded-3xl border border-slate-100 bg-white p-4 shadow-sm sm:p-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="min-w-0 flex-1 space-y-3">
             <div>
@@ -262,8 +262,8 @@ export function OtherServicesStep({ state, onChange }: OtherServicesStepProps) {
                 Add one for each person, ticket, pass, or membership you want in your lifestyle budget.
               </p>
             </div>
-            <div className="-mx-1 overflow-x-auto pb-1 lg:overflow-visible">
-              <div className="flex min-w-max gap-3 px-1 lg:min-w-0 lg:flex-wrap">
+            <div className="-mx-1 overflow-visible pb-1 sm:overflow-x-auto lg:overflow-visible">
+              <div className="flex flex-wrap gap-2 px-1 sm:min-w-max sm:flex-nowrap sm:gap-3 lg:min-w-0 lg:flex-wrap">
                 {OTHER_SERVICES_CATEGORIES.map((category) => {
                   const isActive = category.id === activeCategory;
                   return (
@@ -314,7 +314,7 @@ export function OtherServicesStep({ state, onChange }: OtherServicesStepProps) {
           </div>
         )}
 
-        <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <div className="mt-5 grid grid-cols-1 gap-4 md:mt-6 md:grid-cols-2 xl:grid-cols-3">
           {activeCategoryData.cards.map((card) => {
             const groupHasSelection = card.options.some((option) => (otherSelections[option.id]?.quantity || 0) > 0);
             const groupEmoji = getOtherServicesCardEmoji(card);
@@ -324,7 +324,7 @@ export function OtherServicesStep({ state, onChange }: OtherServicesStepProps) {
             return (
               <div
                 key={card.id}
-                className={`rounded-[30px] border bg-gradient-to-b from-[#F8FEFD] via-white to-white p-4 shadow-sm transition-all sm:p-5 ${
+                className={`rounded-[30px] border bg-gradient-to-b from-[#F8FEFD] via-white to-white p-3 shadow-sm transition-all sm:p-5 ${
                   groupHasSelection
                     ? 'border-[#6CE6D1] shadow-[0_10px_30px_rgba(16,185,129,0.12)]'
                     : 'border-[#8AEBDD] hover:border-[#56D8C0] hover:shadow-[0_8px_24px_rgba(51,114,178,0.08)]'
@@ -350,7 +350,7 @@ export function OtherServicesStep({ state, onChange }: OtherServicesStepProps) {
                   )}
                 </div>
 
-                <div className="space-y-4">
+                <div className="space-y-3 sm:space-y-4">
                   {card.options.map((offer) => {
                     const quantity = otherSelections[offer.id]?.quantity || 0;
                     const isInCart = quantity > 0;
@@ -359,7 +359,7 @@ export function OtherServicesStep({ state, onChange }: OtherServicesStepProps) {
                     return (
                       <div
                         key={offer.id}
-                        className={`relative rounded-[24px] border bg-[#EEF4FB] p-4 transition-all ${
+                        className={`relative rounded-[24px] border bg-[#EEF4FB] p-3 transition-all sm:p-4 ${
                           isInCart
                             ? 'border-[#9FE7D8] ring-2 ring-emerald-100'
                             : 'border-[#D7E3F1]'
@@ -379,7 +379,7 @@ export function OtherServicesStep({ state, onChange }: OtherServicesStepProps) {
                           </div>
 
                           <div className="min-w-0">
-                            <p className="text-4xl font-black leading-none text-[#3372B2]">
+                            <p className="text-3xl font-black leading-none text-[#3372B2] sm:text-4xl">
                               ${formatDisplayPrice(offer.price)}
                             </p>
                             <p className="mt-2 text-xs font-bold uppercase tracking-widest text-slate-400">

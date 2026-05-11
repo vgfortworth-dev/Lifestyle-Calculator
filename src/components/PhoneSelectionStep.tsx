@@ -58,6 +58,26 @@ export function PhoneSelectionStep({
     }
   };
 
+  const renderDecisionOptions = (
+    type: 'refurbished' | 'new',
+    phones: PhoneDeviceOption[],
+    gridClassName: string
+  ) => (
+    <AnimatePresence mode="wait">
+      {decision === type && (
+        <motion.div
+          key={`${type}-options`}
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -10 }}
+          className={gridClassName}
+        >
+          {phones.map(renderPhoneCard)}
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+
   const renderPhoneCard = (phone: PhoneDeviceOption) => {
     const monthlyCost = phone.price / phone.months;
     const isSelected = state.selections.phone === phone.id;
@@ -106,67 +126,58 @@ export function PhoneSelectionStep({
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <button
-          onClick={() => handleDecision('keep')}
-          className={`p-6 rounded-2xl border-2 transition-all text-left ${
-            decision === 'keep' ? 'bg-emerald-50/40' : 'border-slate-200 bg-white hover:border-slate-300'
-          }`}
-          style={decision === 'keep' ? { borderColor: colors.selectedGreen } : undefined}
-        >
-          <h3 className="font-bold text-lg mb-1">Keep current phone</h3>
-          <p className="text-sm text-slate-500">My iPhone 17 Pro works fine. I'll save my money.</p>
-          <p className="mt-4 font-black text-xl">$0/mo</p>
-        </button>
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <div className="space-y-3">
+          <button
+            onClick={() => handleDecision('keep')}
+            className={`w-full rounded-2xl border-2 p-6 text-left transition-all ${
+              decision === 'keep' ? 'bg-emerald-50/40' : 'border-slate-200 bg-white hover:border-slate-300'
+            }`}
+            style={decision === 'keep' ? { borderColor: colors.selectedGreen } : undefined}
+          >
+            <h3 className="mb-1 text-lg font-bold">Keep current phone</h3>
+            <p className="text-sm text-slate-500">My iPhone 17 Pro works fine. I'll save my money.</p>
+            <p className="mt-4 text-xl font-black">$0/mo</p>
+          </button>
+        </div>
 
-        <button
-          onClick={() => handleDecision('refurbished')}
-          className={`p-6 rounded-2xl border-2 transition-all text-left ${
-            decision === 'refurbished' ? 'bg-emerald-50/40' : 'border-slate-200 bg-white hover:border-slate-300'
-          }`}
-          style={decision === 'refurbished' ? { borderColor: colors.selectedGreen } : undefined}
-        >
-          <h3 className="font-bold text-lg mb-1">Buy refurbished</h3>
-          <p className="text-sm text-slate-500">I want a newer model, but I want to save some money.</p>
-        </button>
+        <div className="space-y-3">
+          <button
+            onClick={() => handleDecision('refurbished')}
+            className={`w-full rounded-2xl border-2 p-6 text-left transition-all ${
+              decision === 'refurbished' ? 'bg-emerald-50/40' : 'border-slate-200 bg-white hover:border-slate-300'
+            }`}
+            style={decision === 'refurbished' ? { borderColor: colors.selectedGreen } : undefined}
+          >
+            <h3 className="mb-1 text-lg font-bold">Buy refurbished</h3>
+            <p className="text-sm text-slate-500">I want a newer model, but I want to save some money.</p>
+          </button>
+          <div className="md:hidden">
+            {renderDecisionOptions('refurbished', refurbishedOptions, 'grid grid-cols-1 gap-3')}
+          </div>
+        </div>
 
-        <button
-          onClick={() => handleDecision('new')}
-          className={`p-6 rounded-2xl border-2 transition-all text-left ${
-            decision === 'new' ? 'bg-emerald-50/40' : 'border-slate-200 bg-white hover:border-slate-300'
-          }`}
-          style={decision === 'new' ? { borderColor: colors.selectedGreen } : undefined}
-        >
-          <h3 className="font-bold text-lg mb-1">Buy a new phone</h3>
-          <p className="text-sm text-slate-500">I want the latest tech (iPhone 21) right now!</p>
-        </button>
+        <div className="space-y-3">
+          <button
+            onClick={() => handleDecision('new')}
+            className={`w-full rounded-2xl border-2 p-6 text-left transition-all ${
+              decision === 'new' ? 'bg-emerald-50/40' : 'border-slate-200 bg-white hover:border-slate-300'
+            }`}
+            style={decision === 'new' ? { borderColor: colors.selectedGreen } : undefined}
+          >
+            <h3 className="mb-1 text-lg font-bold">Buy a new phone</h3>
+            <p className="text-sm text-slate-500">I want the latest tech (iPhone 21) right now!</p>
+          </button>
+          <div className="md:hidden">
+            {renderDecisionOptions('new', newOptions, 'grid grid-cols-1 gap-3')}
+          </div>
+        </div>
       </div>
 
-      <AnimatePresence mode="wait">
-        {decision === 'refurbished' && (
-          <motion.div
-            key="refurbished"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -12 }}
-            className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4"
-          >
-            {refurbishedOptions.map(renderPhoneCard)}
-          </motion.div>
-        )}
-
-        {decision === 'new' && (
-          <motion.div
-            key="new"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -12 }}
-            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-4"
-          >
-            {newOptions.map(renderPhoneCard)}
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <div className="hidden md:block">
+        {renderDecisionOptions('refurbished', refurbishedOptions, 'grid grid-cols-1 gap-4 pt-4 sm:grid-cols-3')}
+        {renderDecisionOptions('new', newOptions, 'grid grid-cols-1 gap-4 pt-4 sm:grid-cols-2 lg:grid-cols-4')}
+      </div>
     </div>
   );
 }

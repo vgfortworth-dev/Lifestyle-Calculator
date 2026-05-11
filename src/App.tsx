@@ -5,7 +5,7 @@
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { 
   MapPin, Home, ShieldCheck, ChevronRight, ChevronLeft, ChevronDown,
   RotateCcw, Info, CheckCircle2,
@@ -1212,7 +1212,7 @@ export default function App() {
         </div>
       </ModalShell>
 
-      <div className="relative min-h-screen bg-slate-50 font-sans text-slate-900 pb-52 sm:pb-32">
+      <div className="relative min-h-screen bg-slate-50 pb-44 font-sans text-slate-900 sm:pb-32">
         <Nav
           sessionEmail={session.user.email}
           stepLabel={showHistory ? 'History' : safeSteps[state.currentStep]}
@@ -1225,7 +1225,7 @@ export default function App() {
           onSignOut={handleSignOut}
         />
 
-        <main className="max-w-5xl mx-auto px-6 pt-8">
+        <main className="mx-auto max-w-5xl px-4 pt-4 sm:px-6 sm:pt-8">
           {showHistory ? (
             <HistoryPage userId={session.user.id} />
           ) : (
@@ -1249,32 +1249,32 @@ export default function App() {
           <motion.footer 
             initial={{ y: 100 }}
             animate={{ y: 0 }}
-            className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100 p-6 z-50 shadow-2xl"
+            className="fixed bottom-0 left-0 right-0 z-50 border-t border-slate-100 bg-white px-3 py-3 shadow-2xl sm:p-6"
           >
-            <div className="max-w-5xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-6">
-              <div className="flex items-center gap-8">
-                <div className="flex flex-col">
+            <div className="mx-auto flex max-w-5xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
+              <div className="grid w-full grid-cols-2 gap-3 sm:flex sm:w-auto sm:items-center sm:gap-8">
+                <div className="flex min-w-0 flex-col rounded-2xl bg-slate-50 px-3 py-2.5 sm:bg-transparent sm:px-0 sm:py-0">
                   <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Monthly Total</span>
-                  <span className="text-3xl font-black text-slate-900">${monthlyTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                  <span className="text-xl font-black leading-tight text-slate-900 sm:text-3xl">${monthlyTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                 </div>
                 <div className="h-10 w-px bg-slate-100 hidden sm:block" />
-                <div className="flex flex-col">
+                <div className="flex min-w-0 flex-col rounded-2xl bg-slate-50 px-3 py-2.5 sm:bg-transparent sm:px-0 sm:py-0">
                   <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Annual Salary Needed</span>
-                  <span className="text-xl font-bold text-orange-500">${recommendedSalary.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+                  <span className="text-base font-bold leading-tight text-orange-500 sm:text-xl">${recommendedSalary.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
                 </div>
               </div>
               
-              <div className="flex gap-4 w-full sm:w-auto">
+              <div className="grid w-full grid-cols-2 gap-3 sm:flex sm:w-auto sm:gap-4">
                 <button 
                   onClick={prevStep}
-                  className="flex-1 sm:flex-none px-6 py-4 bg-slate-100 text-slate-600 rounded-2xl font-bold hover:bg-slate-200 transition-all flex items-center justify-center gap-2"
+                  className="flex items-center justify-center gap-2 rounded-2xl bg-slate-100 px-4 py-3 text-sm font-bold text-slate-600 transition-all hover:bg-slate-200 sm:px-6 sm:py-4 sm:text-base"
                 >
                   <ChevronLeft className="w-5 h-5" /> Back
                 </button>
                 <button 
                   onClick={nextStep}
                   disabled={!canAdvanceCurrentStep}
-                  className="flex-1 sm:flex-none px-10 py-4 bg-orange-500 text-white rounded-2xl font-bold hover:bg-orange-600 transition-all shadow-lg shadow-orange-100 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-orange-500"
+                  className="flex items-center justify-center gap-2 rounded-2xl bg-orange-500 px-4 py-3 text-sm font-bold text-white transition-all shadow-lg shadow-orange-100 hover:bg-orange-600 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-orange-500 sm:px-10 sm:py-4 sm:text-base"
                 >
                   Next Step <ChevronRight className="w-5 h-5" />
                 </button>
@@ -1765,15 +1765,18 @@ function FeedbackTool({ stepName }: { stepName: string }) {
   };
 
   return (
-    <div id="feedback-tool" className="fixed right-6 top-1/2 z-[200] -translate-y-1/2">
+    <div
+      id="feedback-tool"
+      className="fixed bottom-24 right-3 z-[200] sm:bottom-auto sm:right-6 sm:top-1/2 sm:-translate-y-1/2"
+    >
       <button
         onClick={openFeedbackForm}
-        className="flex flex-col items-center gap-1 rounded-full bg-slate-900 p-4 text-white shadow-2xl transition-all hover:bg-orange-500"
+        className="flex items-center gap-2 rounded-full bg-slate-900 px-3 py-2.5 text-white shadow-2xl transition-all hover:bg-orange-500 sm:flex-col sm:gap-1 sm:p-4"
         aria-label={`Open anonymous feedback form for ${stepName}`}
         title="Open anonymous feedback form"
       >
-        <MessageSquare className="h-6 w-6" />
-        <span className="text-[10px] font-bold uppercase">Feedback</span>
+        <MessageSquare className="h-4 w-4 sm:h-6 sm:w-6" />
+        <span className="text-[10px] font-bold uppercase sm:text-[10px]">Feedback</span>
       </button>
     </div>
   );
@@ -2146,7 +2149,7 @@ function ResultsStep({ state, monthlyTotal, annualTotal, recommendedSalary, onRe
             </div>
           </div>
 
-          <div className="bg-white rounded-3xl border border-slate-100 shadow-xl p-8 space-y-6">
+          <div className="space-y-5 rounded-3xl border border-slate-100 bg-white p-5 shadow-xl sm:p-8 sm:space-y-6">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-indigo-100 text-indigo-600 rounded-xl">
                 <PieChartIcon className="w-6 h-6" />
@@ -2154,15 +2157,15 @@ function ResultsStep({ state, monthlyTotal, annualTotal, recommendedSalary, onRe
               <h3 className="text-xl font-bold text-slate-900">Budget Visualization</h3>
             </div>
             
-            <div className="h-[300px] w-full">
+            <div className="h-[250px] w-full sm:h-[300px]">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
                     data={categoryData}
                     cx="50%"
                     cy="50%"
-                    innerRadius={60}
-                    outerRadius={80}
+                    innerRadius={52}
+                    outerRadius={76}
                     paddingAngle={5}
                     dataKey="value"
                   >
@@ -2177,16 +2180,24 @@ function ResultsStep({ state, monthlyTotal, annualTotal, recommendedSalary, onRe
                     ]}
                     contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
                   />
-                  <Legend verticalAlign="bottom" height={36}/>
                 </PieChart>
               </ResponsiveContainer>
             </div>
             
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-4">
+            <div className="grid grid-cols-1 gap-3 pt-1 sm:grid-cols-2 lg:grid-cols-4 sm:pt-4">
               {categoryData.map((item, i) => (
-                <div key={i} className="p-3 bg-slate-50 rounded-2xl border border-slate-100">
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter mb-1">{item.name}</p>
-                  <p className="text-sm font-black text-slate-900">${item.value.toLocaleString()}</p>
+                <div key={i} className="rounded-2xl border border-slate-100 bg-slate-50 p-3">
+                  <div className="flex items-start gap-3">
+                    <span
+                      className="mt-1 h-3 w-3 shrink-0 rounded-full"
+                      style={{ backgroundColor: budgetChartColors[i % budgetChartColors.length] }}
+                      aria-hidden="true"
+                    />
+                    <div className="min-w-0">
+                      <p className="mb-1 text-[10px] font-bold uppercase tracking-tighter text-slate-400">{item.name}</p>
+                      <p className="text-sm font-black text-slate-900">${item.value.toLocaleString()}</p>
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>
