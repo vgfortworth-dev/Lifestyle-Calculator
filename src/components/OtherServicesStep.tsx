@@ -303,7 +303,7 @@ export function OtherServicesStep({ state, onChange }: OtherServicesStepProps) {
               >
                 <div className="px-2 pb-3 pt-1 text-center">
                   <StableEmoji symbol={groupEmoji} className="text-4xl leading-none sm:text-5xl" />
-                  <h5 className="mt-3 break-words text-center text-3xl font-black uppercase leading-tight text-[#159A8C] sm:text-[2.1rem]">
+                  <h5 className="mt-3 break-words px-1 text-center text-[1.7rem] font-black uppercase leading-[1.05] tracking-tight text-[#159A8C] sm:text-[1.65rem] lg:text-[1.75rem]">
                     {card.title}
                   </h5>
                   {card.priceHint && (
