@@ -1,7 +1,13 @@
 import { GoogleGenAI, Type } from '@google/genai';
+import { createClient } from '@supabase/supabase-js';
 
 const MAX_BODY_SIZE = 4096;
 const MAX_REGION_LENGTH = 120;
+const RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
+const RATE_LIMIT_MAX_REQUESTS = 10;
+const rateLimitStore = new Map();
+
+let supabaseServerClient = null;
 
 function sendJson(res, statusCode, body) {
   res.status(statusCode).setHeader('Content-Type', 'application/json');
@@ -39,6 +45,57 @@ function validatePayload(body) {
   return null;
 }
 
+function getSupabaseServerClient() {
+  if (supabaseServerClient) return supabaseServerClient;
+
+  const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+  const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
+
+  if (!supabaseUrl || !supabaseAnonKey) {
+    return null;
+  }
+
+  supabaseServerClient = createClient(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+    },
+  });
+
+  return supabaseServerClient;
+}
+
+function getBearerToken(req) {
+  const authHeader = req.headers?.authorization || req.headers?.Authorization;
+  if (typeof authHeader !== 'string') return null;
+
+  const [scheme, token] = authHeader.split(' ');
+  if (scheme !== 'Bearer' || !token) return null;
+
+  return token.trim();
+}
+
+function checkRateLimit(key) {
+  const now = Date.now();
+  const current = rateLimitStore.get(key);
+
+  if (!current || current.resetAt <= now) {
+    rateLimitStore.set(key, {
+      count: 1,
+      resetAt: now + RATE_LIMIT_WINDOW_MS,
+    });
+    return true;
+  }
+
+  if (current.count >= RATE_LIMIT_MAX_REQUESTS) {
+    return false;
+  }
+
+  current.count += 1;
+  rateLimitStore.set(key, current);
+  return true;
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
@@ -53,6 +110,33 @@ export default async function handler(req, res) {
   const validationError = validatePayload(req.body);
   if (validationError) {
     return sendJson(res, 400, { error: 'Invalid request.' });
+  }
+
+  const accessToken = getBearerToken(req);
+  if (!accessToken) {
+    return sendJson(res, 401, { error: 'Authentication required.' });
+  }
+
+  const supabase = getSupabaseServerClient();
+  if (!supabase) {
+    console.error('[GeminiCareerMatch] Supabase auth configuration is missing.');
+    return sendJson(res, 500, { error: 'Career suggestions are temporarily unavailable.' });
+  }
+
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser(accessToken);
+
+  if (authError || !user?.id) {
+    return sendJson(res, 401, { error: 'Authentication required.' });
+  }
+
+  const forwardedFor = typeof req.headers['x-forwarded-for'] === 'string' ? req.headers['x-forwarded-for'] : '';
+  const clientIp = forwardedFor.split(',')[0]?.trim() || 'unknown';
+  const rateLimitKey = `${user.id}:${clientIp}`;
+  if (!checkRateLimit(rateLimitKey)) {
+    return sendJson(res, 429, { error: 'Too many requests. Please try again later.' });
   }
 
   const apiKey = process.env.GEMINI_API_KEY;

@@ -47,14 +47,16 @@ function logRiasecQueryDiagnostic({
     usedFallback,
   };
 
+  if (!import.meta.env.DEV) {
+    return;
+  }
+
   if (error) {
     console.error('[RIASEC] Supabase diagnostic', payload);
     return;
   }
 
-  if (import.meta.env.DEV) {
-    console.info('[RIASEC] Supabase diagnostic', payload);
-  }
+  console.info('[RIASEC] Supabase diagnostic', payload);
 }
 
 function isRiasecCategory(value: string): value is RiasecCategory {
@@ -196,7 +198,9 @@ export async function loadRiasecQuestions(): Promise<{ questions: RiasecQuestion
     }
   } catch (error) {
     lastError = error as RiasecQueryError;
-    console.error('[RIASEC] Unexpected question loading failure.', error);
+    if (import.meta.env.DEV) {
+      console.error('[RIASEC] Unexpected question loading failure.', error);
+    }
   }
 
   if (import.meta.env.DEV) {

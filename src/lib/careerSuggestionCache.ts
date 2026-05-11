@@ -35,8 +35,13 @@ function writeSessionCareerSuggestions(key: string, suggestions: CareerSuggestio
   }
 }
 
-export function getCareerSuggestionKey(salary: number, region: string, riasecCode?: string | null) {
-  return `${Math.round(salary)}::${region}::${riasecCode || 'no-riasec'}`;
+export function getCareerSuggestionKey(
+  userId: string | null | undefined,
+  salary: number,
+  region: string,
+  riasecCode?: string | null
+) {
+  return `${userId || 'anonymous'}::${Math.round(salary)}::${region}::${riasecCode || 'no-riasec'}`;
 }
 
 export async function getStableCareerSuggestions(
@@ -70,4 +75,53 @@ export async function getStableCareerSuggestions(
 
   careerSuggestionRequests.set(key, request);
   return request;
+}
+
+export function clearCareerSuggestionCache(userId?: string | null) {
+  if (!userId) {
+    careerSuggestionCache.clear();
+    careerSuggestionRequests.clear();
+
+    try {
+      const keysToRemove: string[] = [];
+      for (let index = 0; index < sessionStorage.length; index += 1) {
+        const key = sessionStorage.key(index);
+        if (key?.startsWith(CAREER_SUGGESTIONS_SESSION_PREFIX)) {
+          keysToRemove.push(key);
+        }
+      }
+
+      keysToRemove.forEach((key) => sessionStorage.removeItem(key));
+    } catch {
+      // Session cache cleanup is best effort.
+    }
+    return;
+  }
+
+  for (const key of careerSuggestionCache.keys()) {
+    if (key.startsWith(`${userId}::`)) {
+      careerSuggestionCache.delete(key);
+    }
+  }
+
+  for (const key of careerSuggestionRequests.keys()) {
+    if (key.startsWith(`${userId}::`)) {
+      careerSuggestionRequests.delete(key);
+    }
+  }
+
+  try {
+    const storagePrefix = `${CAREER_SUGGESTIONS_SESSION_PREFIX}${userId}::`;
+    const keysToRemove: string[] = [];
+    for (let index = 0; index < sessionStorage.length; index += 1) {
+      const key = sessionStorage.key(index);
+      if (key?.startsWith(storagePrefix)) {
+        keysToRemove.push(key);
+      }
+    }
+
+    keysToRemove.forEach((key) => sessionStorage.removeItem(key));
+  } catch {
+    // Session cache cleanup is best effort.
+  }
 }

@@ -69,10 +69,10 @@ import { getEnhancedInsuranceOptions } from './content/insuranceInfo';
 import { SUBSCRIPTION_OPTION_INFO } from './content/subscriptionInfo';
 import { RiasecQuiz } from './pages/student/RiasecQuiz';
 import { RiasecSetup } from './pages/student/RiasecSetup';
-import { isRiasecSummary, loadRiasecSummary, saveRiasecSummary } from './lib/riasecStorage';
+import { clearRiasecSummary, isRiasecSummary, loadRiasecSummary, saveRiasecSummary } from './lib/riasecStorage';
 import { RiasecSummary } from './types/riasec';
 import { rankCareerMatches } from './lib/rankCareerMatches';
-import { getCareerSuggestionKey, getStableCareerSuggestions } from './lib/careerSuggestionCache';
+import { clearCareerSuggestionCache, getCareerSuggestionKey, getStableCareerSuggestions } from './lib/careerSuggestionCache';
 import { getTotalMonthlyClothingCost, getTotalSelectedItemCount } from './lib/clothingBudget';
 import { getTotalGroceryItemCount, getTotalMonthlyGroceryCost } from './lib/groceryBudget';
 
@@ -111,6 +111,7 @@ const USE_SUPABASE = true;
 const APP_LOGO_SRC = '/images/Liestyle calculator logo_Lifestyle Calculator Logo.svg';
 const INTRO_VIDEO_URL = 'https://www.youtube.com/watch?v=ACzi_o4b7o8';
 const INTRO_VIDEO_STORAGE_KEY = 'lifestyleIntroVideoSeen';
+const CALCULATOR_STATE_STORAGE_PREFIX = 'lifestyle_calculator_state';
 const DEFAULT_JOTFORM_FEEDBACK_URL = 'https://t3.jotform.com/261275078019055';
 const FEEDBACK_STEP_LABELS: Record<string, string> = {
   Welcome: 'Welcome / Home Page',
@@ -137,6 +138,10 @@ const FEEDBACK_STEP_LABELS: Record<string, string> = {
 
 function getFeedbackStepLabel(stepName: string) {
   return FEEDBACK_STEP_LABELS[stepName] || stepName || 'Unknown';
+}
+
+function getCalculatorStateStorageKey(userId?: string | null) {
+  return userId ? `${CALCULATOR_STATE_STORAGE_PREFIX}::${userId}` : null;
 }
 
 function getIntroVideoEmbedUrl(url: string) {
@@ -269,6 +274,120 @@ function getHistoryRiasecSummary(): RiasecSummary | null {
   return isRiasecSummary(historyState?.riasecResult) ? historyState.riasecResult : null;
 }
 
+function migrateStoredQuizState(rawValue: string): QuizState | null {
+  try {
+    const parsed = JSON.parse(rawValue);
+    const migrated = {
+      ...INITIAL_STATE,
+      ...parsed,
+      selections: {
+        ...INITIAL_STATE.selections,
+        ...(parsed.selections || {}),
+      },
+    };
+
+    if (typeof migrated.selections.transportation === 'string') {
+      migrated.selections.transportation = migrated.selections.transportation
+        ? [migrated.selections.transportation]
+        : [];
+    }
+    if (migrated.selections.phone === 'keep-current') {
+      migrated.selections.phone = 'keep-phone';
+    }
+    if (migrated.selections.phone === 'new-21') {
+      migrated.selections.phone = 'new-21-256';
+    }
+    if (typeof migrated.selections.fuel !== 'string') {
+      migrated.selections.fuel = '';
+    }
+    migrated.selections.fuelPriceEnvironment = getFuelPriceEnvironment(migrated.selections.fuelPriceEnvironment);
+    if (Array.isArray(migrated.selections.insurance)) {
+      migrated.selections.insurance = migrated.selections.insurance.map((id: string) => {
+        if (id === 'dental-standard') return 'dental-low';
+        if (id === 'vision-standard') return 'vision-low';
+        return id;
+      });
+    }
+    if (
+      !migrated.selections.clothingCloset ||
+      Array.isArray(migrated.selections.clothingCloset) ||
+      typeof migrated.selections.clothingCloset !== 'object'
+    ) {
+      migrated.selections.clothingCloset = {};
+    }
+    if (
+      !migrated.selections.foodCart ||
+      Array.isArray(migrated.selections.foodCart) ||
+      typeof migrated.selections.foodCart !== 'object'
+    ) {
+      migrated.selections.foodCart = {};
+    }
+    if (
+      Object.keys(migrated.selections.foodCart).length === 0 &&
+      typeof migrated.selections.food === 'string' &&
+      migrated.selections.food
+    ) {
+      migrated.selections.foodCart = buildLegacyFoodCart(migrated.selections.food);
+    }
+    if ('clothing' in migrated.selections) {
+      delete migrated.selections.clothing;
+    }
+    if (Array.isArray(migrated.selections.other)) {
+      migrated.selections.other = migrated.selections.other.reduce((acc: Record<string, any>, id: string) => {
+        const option = OTHER_OPTIONS.find((candidate) => candidate.id === id);
+        if (!option) return acc;
+        acc[id] = {
+          id: option.id,
+          name: option.name,
+          price: option.monthlyCost,
+          quantity: 1,
+          description: option.description,
+          emoji: option.emoji,
+          category: option.category,
+          type: option.type,
+        };
+        return acc;
+      }, {});
+    } else if (
+      !migrated.selections.other ||
+      typeof migrated.selections.other !== 'object'
+    ) {
+      migrated.selections.other = {};
+    }
+
+    return migrated;
+  } catch {
+    return null;
+  }
+}
+
+function loadStoredQuizState(userId?: string | null): QuizState {
+  if (!userId) return INITIAL_STATE;
+
+  try {
+    const storageKey = getCalculatorStateStorageKey(userId);
+    if (!storageKey) return INITIAL_STATE;
+
+    const saved = localStorage.getItem(storageKey);
+    if (!saved) return INITIAL_STATE;
+
+    return migrateStoredQuizState(saved) || INITIAL_STATE;
+  } catch {
+    return INITIAL_STATE;
+  }
+}
+
+function clearLegacySharedStudentState() {
+  try {
+    localStorage.removeItem(CALCULATOR_STATE_STORAGE_PREFIX);
+  } catch {
+    // Shared-device cleanup is best effort.
+  }
+
+  clearRiasecSummary();
+  clearCareerSuggestionCache();
+}
+
 export default function App() {
   // State
   const [session, setSession] = useState<any>(null);
@@ -277,11 +396,12 @@ export default function App() {
   const [isIntroVideoOpen, setIsIntroVideoOpen] = useState(false);
   const [hasCheckedIntroVideo, setHasCheckedIntroVideo] = useState(false);
   const [riasecSummary, setRiasecSummary] = useState<RiasecSummary | null>(() =>
-    getHistoryRiasecSummary() || loadRiasecSummary()
+    getHistoryRiasecSummary()
   );
   const [hasCompletedRiasecSetup, setHasCompletedRiasecSetup] = useState(() =>
-    !!getHistoryRiasecSummary() || !!loadRiasecSummary()
+    !!getHistoryRiasecSummary()
   );
+  const [hasHydratedStudentState, setHasHydratedStudentState] = useState(false);
   const {
     regions,
     internetOptions,
@@ -295,96 +415,7 @@ export default function App() {
     transportOptions,
     loading: calculatorDataLoading
   } = useCalculatorData();
-  const [state, setState] = useState<QuizState>(() => {
-    const saved = localStorage.getItem('lifestyle_calculator_state');
-    if (!saved) return INITIAL_STATE;
-
-    try {
-      const parsed = JSON.parse(saved);
-      const migrated = {
-        ...INITIAL_STATE,
-        ...parsed,
-        selections: {
-          ...INITIAL_STATE.selections,
-          ...(parsed.selections || {}),
-        },
-      };
-
-      // Migration: ensure transportation is an array
-      if (typeof migrated.selections.transportation === 'string') {
-        migrated.selections.transportation = migrated.selections.transportation
-          ? [migrated.selections.transportation]
-          : [];
-      }
-      if (migrated.selections.phone === 'keep-current') {
-        migrated.selections.phone = 'keep-phone';
-      }
-      if (migrated.selections.phone === 'new-21') {
-        migrated.selections.phone = 'new-21-256';
-      }
-      if (typeof migrated.selections.fuel !== 'string') {
-        migrated.selections.fuel = '';
-      }
-      migrated.selections.fuelPriceEnvironment = getFuelPriceEnvironment(migrated.selections.fuelPriceEnvironment);
-      if (Array.isArray(migrated.selections.insurance)) {
-        migrated.selections.insurance = migrated.selections.insurance.map((id: string) => {
-          if (id === 'dental-standard') return 'dental-low';
-          if (id === 'vision-standard') return 'vision-low';
-          return id;
-        });
-      }
-      if (
-        !migrated.selections.clothingCloset ||
-        Array.isArray(migrated.selections.clothingCloset) ||
-        typeof migrated.selections.clothingCloset !== 'object'
-      ) {
-        migrated.selections.clothingCloset = {};
-      }
-      if (
-        !migrated.selections.foodCart ||
-        Array.isArray(migrated.selections.foodCart) ||
-        typeof migrated.selections.foodCart !== 'object'
-      ) {
-        migrated.selections.foodCart = {};
-      }
-      if (
-        Object.keys(migrated.selections.foodCart).length === 0 &&
-        typeof migrated.selections.food === 'string' &&
-        migrated.selections.food
-      ) {
-        migrated.selections.foodCart = buildLegacyFoodCart(migrated.selections.food);
-      }
-      if ('clothing' in migrated.selections) {
-        delete migrated.selections.clothing;
-      }
-      if (Array.isArray(migrated.selections.other)) {
-        migrated.selections.other = migrated.selections.other.reduce((acc: Record<string, any>, id: string) => {
-          const option = OTHER_OPTIONS.find((candidate) => candidate.id === id);
-          if (!option) return acc;
-          acc[id] = {
-            id: option.id,
-            name: option.name,
-            price: option.monthlyCost,
-            quantity: 1,
-            description: option.description,
-            emoji: option.emoji,
-            category: option.category,
-            type: option.type,
-          };
-          return acc;
-        }, {});
-      } else if (
-        !migrated.selections.other ||
-        typeof migrated.selections.other !== 'object'
-      ) {
-        migrated.selections.other = {};
-      }
-
-      return migrated;
-    } catch {
-      return INITIAL_STATE;
-    }
-  });
+  const [state, setState] = useState<QuizState>(INITIAL_STATE);
 
   const safeSteps = Array.isArray(STEPS) ? STEPS : [];
   const safeRegions = Array.isArray(regions) ? regions : [];
@@ -437,11 +468,42 @@ export default function App() {
     : PHONE_OPTIONS;
   const introVideoEmbedUrl = useMemo(() => getIntroVideoEmbedUrl(INTRO_VIDEO_URL), []);
   const isWelcomeScreen = routePath === '/' && safeSteps[state.currentStep] === 'Welcome';
+  const currentUserId = session?.user?.id ?? null;
 
   // Persistence and session effects
   useEffect(() => {
-    localStorage.setItem('lifestyle_calculator_state', JSON.stringify(state));
-  }, [state]);
+    clearLegacySharedStudentState();
+  }, []);
+
+  useEffect(() => {
+    if (!currentUserId) {
+      setState(INITIAL_STATE);
+      setRiasecSummary(getHistoryRiasecSummary());
+      setHasCompletedRiasecSetup(!!getHistoryRiasecSummary());
+      setShowHistory(false);
+      setHasHydratedStudentState(false);
+      return;
+    }
+
+    const routeSummary = getHistoryRiasecSummary();
+    const storedSummary = loadRiasecSummary(currentUserId);
+    const nextSummary = routeSummary || storedSummary;
+
+    setState(loadStoredQuizState(currentUserId));
+    setRiasecSummary(nextSummary);
+    setHasCompletedRiasecSetup(!!nextSummary);
+    setShowHistory(false);
+    setHasHydratedStudentState(true);
+  }, [currentUserId]);
+
+  useEffect(() => {
+    if (!currentUserId || !hasHydratedStudentState) return;
+
+    const storageKey = getCalculatorStateStorageKey(currentUserId);
+    if (!storageKey) return;
+
+    localStorage.setItem(storageKey, JSON.stringify(state));
+  }, [currentUserId, hasHydratedStudentState, state]);
 
   useEffect(() => {
     if (!isWelcomeScreen || hasCheckedIntroVideo) return;
@@ -466,7 +528,7 @@ export default function App() {
         setRiasecSummary(routeSummary);
         setHasCompletedRiasecSetup(true);
       } else {
-        const storedSummary = loadRiasecSummary();
+        const storedSummary = loadRiasecSummary(currentUserId);
         setRiasecSummary(storedSummary);
         if (storedSummary) setHasCompletedRiasecSetup(true);
       }
@@ -474,7 +536,7 @@ export default function App() {
 
     window.addEventListener('popstate', handleRouteChange);
     return () => window.removeEventListener('popstate', handleRouteChange);
-  }, []);
+  }, [currentUserId]);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => setSession(session));
@@ -711,7 +773,7 @@ export default function App() {
   };
 
   const handleRiasecHandoff = (summary: RiasecSummary) => {
-    saveRiasecSummary(summary);
+    saveRiasecSummary(summary, currentUserId);
     setRiasecSummary(summary);
     setHasCompletedRiasecSetup(true);
     window.history.pushState({ riasecResult: summary }, '', '/');
@@ -733,6 +795,29 @@ export default function App() {
   const closeIntroVideo = () => {
     setIsIntroVideoOpen(false);
     localStorage.setItem(INTRO_VIDEO_STORAGE_KEY, 'true');
+  };
+
+  const handleSignOut = async () => {
+    if (currentUserId) {
+      const stateStorageKey = getCalculatorStateStorageKey(currentUserId);
+      if (stateStorageKey) {
+        try {
+          localStorage.removeItem(stateStorageKey);
+        } catch {
+          // Shared-device cleanup is best effort.
+        }
+      }
+      clearRiasecSummary(currentUserId);
+      clearCareerSuggestionCache(currentUserId);
+    }
+
+    clearLegacySharedStudentState();
+    setState(INITIAL_STATE);
+    setRiasecSummary(null);
+    setHasCompletedRiasecSetup(false);
+    setShowHistory(false);
+
+    await supabase.auth.signOut();
   };
 
   // Step rendering
@@ -1066,6 +1151,16 @@ export default function App() {
     return <AdminPage />;
   }
 
+  if (!hasHydratedStudentState) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6">
+        <div className="rounded-3xl border border-slate-100 bg-white px-8 py-6 shadow-sm text-center">
+          <p className="text-xs font-black uppercase tracking-widest text-slate-400">Loading your session</p>
+        </div>
+      </div>
+    );
+  }
+
   if (!hasCompletedRiasecSetup) {
     return (
       <RiasecSetup
@@ -1127,7 +1222,7 @@ export default function App() {
           showProgress={!showHistory && state.currentStep > 0 && state.currentStep < safeSteps.length - 1}
           onReset={resetQuiz}
           onToggleHistory={() => setShowHistory(!showHistory)}
-          onSignOut={() => supabase.auth.signOut()}
+          onSignOut={handleSignOut}
         />
 
         <main className="max-w-5xl mx-auto px-6 pt-8">
@@ -1649,14 +1744,16 @@ function buildJotformFeedbackUrl(stepName: string) {
     const params = new URLSearchParams(url.search);
 
     params.set('currentStep', feedbackStepLabel);
-    params.set('currentUrl', window.location.href);
+    params.set('currentUrl', `${window.location.origin}${window.location.pathname}`);
     params.set('browserInfo', navigator.userAgent);
     params.set('screenSize', `${window.innerWidth}x${window.innerHeight}`);
 
     url.search = params.toString();
     return url.toString();
   } catch (error) {
-    console.error('Invalid Jotform feedback URL configuration:', error);
+    if (import.meta.env.DEV) {
+      console.error('Invalid Jotform feedback URL configuration:', error);
+    }
     return baseUrl;
   }
 }
@@ -1750,8 +1847,8 @@ function ResultsStep({ state, monthlyTotal, annualTotal, recommendedSalary, onRe
   const [expandedBreakdownCategories, setExpandedBreakdownCategories] = useState<string[]>([]);
   const latestCareerFetchKey = useRef('');
   const careerFetchKey = useMemo(
-    () => getCareerSuggestionKey(finalizedRecommendedSalary, currentRegion.name, matcherRiasecCode),
-    [finalizedRecommendedSalary, currentRegion.name, matcherRiasecCode]
+    () => getCareerSuggestionKey(userId, finalizedRecommendedSalary, currentRegion.name, matcherRiasecCode),
+    [userId, finalizedRecommendedSalary, currentRegion.name, matcherRiasecCode]
   );
 
   useEffect(() => {
