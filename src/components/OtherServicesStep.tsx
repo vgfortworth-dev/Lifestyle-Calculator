@@ -301,13 +301,13 @@ export function OtherServicesStep({ state, onChange }: OtherServicesStepProps) {
                     : 'border-[#8AEBDD] hover:border-[#56D8C0] hover:shadow-[0_8px_24px_rgba(51,114,178,0.08)]'
                 }`}
               >
-                <div className="px-2 pb-3 pt-1 text-center">
-                  <StableEmoji symbol={groupEmoji} className="text-4xl leading-none sm:text-5xl" />
-                  <h5 className="mt-3 break-words px-1 text-center text-[1.7rem] font-black uppercase leading-[1.05] tracking-tight text-[#159A8C] sm:text-[1.65rem] lg:text-[1.75rem]">
+                <div className="px-1 pb-2 pt-1 text-center">
+                  <StableEmoji symbol={groupEmoji} className="text-[2.1rem] leading-none sm:text-[2.5rem]" />
+                  <h5 className="mt-2 break-words px-0.5 text-center text-[1.42rem] font-extrabold uppercase leading-[1.12] tracking-[-0.02em] text-[#159A8C] sm:text-[1.4rem] lg:text-[1.48rem]">
                     {card.title}
                   </h5>
                   {card.priceHint && (
-                    <p className="mt-2 text-base font-black uppercase tracking-[0.3em] text-[#10B981]">{card.priceHint}</p>
+                    <p className="mt-1.5 text-sm font-extrabold uppercase tracking-[0.24em] text-[#10B981]">{card.priceHint}</p>
                   )}
                 </div>
 
