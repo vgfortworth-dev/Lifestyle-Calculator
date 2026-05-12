@@ -10,6 +10,8 @@ type NavProps = {
   totalQuestionSteps: number;
   progressPercent: number;
   showProgress: boolean;
+  showHistoryButton?: boolean;
+  showSignOut?: boolean;
   onReset: () => void;
   onToggleHistory: () => void;
   onSignOut: () => void;
@@ -22,6 +24,8 @@ export function Nav({
   totalQuestionSteps,
   progressPercent,
   showProgress,
+  showHistoryButton = true,
+  showSignOut = true,
   onReset,
   onToggleHistory,
   onSignOut,
@@ -35,10 +39,12 @@ export function Nav({
             alt="Lifestyle Calculator logo"
             className="h-9 w-auto object-contain"
           />
-          <div className="hidden sm:flex flex-col">
-            <span className="text-sm font-black text-slate-900">User:</span>
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">{sessionEmail}</span>
-          </div>
+          {sessionEmail ? (
+            <div className="hidden sm:flex flex-col">
+              <span className="text-sm font-black text-slate-900">User:</span>
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">{sessionEmail}</span>
+            </div>
+          ) : null}
         </div>
 
         {showProgress && (
@@ -54,26 +60,30 @@ export function Nav({
         )}
 
         <div className="flex items-center gap-2">
-          <button
-            onClick={onToggleHistory}
-            className="flex items-center gap-2 px-4 py-2 hover:bg-slate-100 rounded-xl transition-all text-slate-500 hover:text-orange-600 font-bold text-sm"
-          >
-            <History className="w-4 h-4" />
-            <span className="hidden sm:inline">History</span>
-          </button>
+          {showHistoryButton ? (
+            <button
+              onClick={onToggleHistory}
+              className="flex items-center gap-2 px-4 py-2 hover:bg-slate-100 rounded-xl transition-all text-slate-500 hover:text-orange-600 font-bold text-sm"
+            >
+              <History className="w-4 h-4" />
+              <span className="hidden sm:inline">History</span>
+            </button>
+          ) : null}
           <button
             onClick={onReset}
             className="flex items-center gap-2 px-4 py-2 hover:bg-slate-100 rounded-xl transition-all text-slate-500 hover:text-orange-600 font-bold text-sm"
           >
             <RotateCcw className="w-4 h-4" />
-            <span className="hidden sm:inline">Reset Quiz</span>
+            <span className="hidden sm:inline">{showSignOut ? 'Reset Quiz' : 'Reset'}</span>
           </button>
-          <button
-            onClick={onSignOut}
-            className="px-4 py-2 bg-slate-900 text-white rounded-xl font-bold text-sm hover:bg-slate-800 transition-all"
-          >
-            Sign Out
-          </button>
+          {showSignOut ? (
+            <button
+              onClick={onSignOut}
+              className="px-4 py-2 bg-slate-900 text-white rounded-xl font-bold text-sm hover:bg-slate-800 transition-all"
+            >
+              Sign Out
+            </button>
+          ) : null}
         </div>
       </div>
     </nav>

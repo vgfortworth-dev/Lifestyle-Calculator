@@ -11,7 +11,8 @@ import {
   RotateCcw, Info, CheckCircle2,
   Save, Loader2, Check, Sparkles,
   MessageSquare, X, ShoppingCart, Shirt,
-  PieChart as PieChartIcon 
+  PieChart as PieChartIcon,
+  Printer, Copy, Mail
 } from 'lucide-react';
 
 import {
@@ -112,6 +113,7 @@ const APP_LOGO_SRC = '/images/Liestyle calculator logo_Lifestyle Calculator Logo
 const INTRO_VIDEO_URL = 'https://www.youtube.com/watch?v=ACzi_o4b7o8';
 const INTRO_VIDEO_STORAGE_KEY = 'lifestyleIntroVideoSeen';
 const CALCULATOR_STATE_STORAGE_PREFIX = 'lifestyle_calculator_state';
+const PILOT_CALCULATOR_STATE_STORAGE_KEY = 'lifestyle_calculator_pilot_state';
 const DEFAULT_JOTFORM_FEEDBACK_URL = 'https://t3.jotform.com/261275078019055';
 const FEEDBACK_STEP_LABELS: Record<string, string> = {
   Welcome: 'Welcome / Home Page',
@@ -141,7 +143,7 @@ function getFeedbackStepLabel(stepName: string) {
 }
 
 function getCalculatorStateStorageKey(userId?: string | null) {
-  return userId ? `${CALCULATOR_STATE_STORAGE_PREFIX}::${userId}` : null;
+  return userId ? `${CALCULATOR_STATE_STORAGE_PREFIX}::${userId}` : PILOT_CALCULATOR_STATE_STORAGE_KEY;
 }
 
 function getIntroVideoEmbedUrl(url: string) {
@@ -210,6 +212,51 @@ function formatWholeDollar(value: number) {
 
 function formatMonthlyCurrency(value: number) {
   return value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function buildStaticCareerExamples(
+  salary: number,
+  regionName: string,
+  riasecCode?: string | null
+): CareerSuggestion[] {
+  const salaryText = `$${formatWholeDollar(Math.round(salary))}`;
+  const code = riasecCode?.trim().toUpperCase() || '';
+
+  const examplesByCode: Record<string, CareerSuggestion[]> = {
+    R: [
+      { title: 'Electrical or HVAC Technician', description: `Hands-on technical roles needed across ${regionName}, often with paid training or trade school pathways.`, education: 'Trade school, apprenticeship, or certificate', avgSalary: `Explore roles near ${salaryText}`, growth: 'Strong local demand' },
+      { title: 'Manufacturing or Logistics Supervisor', description: 'Leads teams, coordinates schedules, and keeps operations moving safely and efficiently.', education: 'Certificate, associate degree, or experience', avgSalary: `Explore roles near ${salaryText}`, growth: 'Stable to high' },
+    ],
+    I: [
+      { title: 'Health Science or Lab Technician', description: `Uses careful observation and problem-solving in clinical, research, or diagnostic settings around ${regionName}.`, education: 'Certificate or associate degree', avgSalary: `Explore roles near ${salaryText}`, growth: 'High' },
+      { title: 'Data Analyst', description: 'Works with information, patterns, and reports to help organizations make better decisions.', education: 'Certificate, associate degree, or bachelor degree', avgSalary: `Explore roles near ${salaryText}`, growth: 'High' },
+    ],
+    A: [
+      { title: 'Digital Media Specialist', description: 'Creates visual, video, web, or social media content for businesses and community organizations.', education: 'Portfolio, certificate, or degree', avgSalary: `Explore roles near ${salaryText}`, growth: 'Growing' },
+      { title: 'UX or Product Designer', description: 'Designs useful digital experiences by combining creativity, research, and problem-solving.', education: 'Portfolio, certificate, or bachelor degree', avgSalary: `Explore roles near ${salaryText}`, growth: 'Growing' },
+    ],
+    S: [
+      { title: 'Registered Nurse or Allied Health Professional', description: `Supports patients and families in hospitals, clinics, or community care settings in ${regionName}.`, education: 'Certificate, associate degree, or bachelor degree', avgSalary: `Explore roles near ${salaryText}`, growth: 'High' },
+      { title: 'Teacher or Student Support Specialist', description: 'Helps students learn, plan, and build skills for school, work, and life.', education: 'Certificate or bachelor degree', avgSalary: `Explore roles near ${salaryText}`, growth: 'Stable' },
+    ],
+    E: [
+      { title: 'Sales or Business Development Representative', description: 'Builds relationships, explains products or services, and helps organizations grow.', education: 'Certificate, associate degree, or bachelor degree', avgSalary: `Explore roles near ${salaryText}`, growth: 'Stable to high' },
+      { title: 'Project Coordinator', description: 'Keeps teams organized, tracks timelines, and helps projects move from plan to finish.', education: 'Certificate, associate degree, or bachelor degree', avgSalary: `Explore roles near ${salaryText}`, growth: 'Growing' },
+    ],
+    C: [
+      { title: 'Accounting or Payroll Specialist', description: 'Works with budgets, records, payments, and financial details for organizations.', education: 'Certificate or associate degree', avgSalary: `Explore roles near ${salaryText}`, growth: 'Stable' },
+      { title: 'Operations or Administrative Coordinator', description: 'Keeps schedules, documents, processes, and customer support organized.', education: 'Certificate, associate degree, or experience', avgSalary: `Explore roles near ${salaryText}`, growth: 'Stable' },
+    ],
+  };
+
+  const primaryCode = code[0];
+  const codeExamples = primaryCode ? examplesByCode[primaryCode] || [] : [];
+  return [
+    ...codeExamples,
+    { title: 'Skilled Trades Career Pathway', description: `Look for regional programs in ${regionName} that connect training to living-wage jobs.`, education: 'Certificate, apprenticeship, or associate degree', avgSalary: `Compare options near ${salaryText}`, growth: 'Strong local demand' },
+    { title: 'Healthcare Career Pathway', description: 'Healthcare offers many entry points, from certificates to advanced degrees, with room to grow over time.', education: 'Certificate through bachelor degree', avgSalary: `Compare options near ${salaryText}`, growth: 'High' },
+    { title: 'Technology or Business Career Pathway', description: 'Digital, operations, and business roles can fit many interest patterns and salary goals.', education: 'Certificate, associate degree, or bachelor degree', avgSalary: `Compare options near ${salaryText}`, growth: 'Growing' },
+  ].slice(0, 5);
 }
 
 // Shared badge styling still used by App-owned generic option rendering.
@@ -362,8 +409,6 @@ function migrateStoredQuizState(rawValue: string): QuizState | null {
 }
 
 function loadStoredQuizState(userId?: string | null): QuizState {
-  if (!userId) return INITIAL_STATE;
-
   try {
     const storageKey = getCalculatorStateStorageKey(userId);
     if (!storageKey) return INITIAL_STATE;
@@ -383,7 +428,15 @@ function clearLegacySharedStudentState() {
   } catch {
     // Shared-device cleanup is best effort.
   }
+}
 
+function clearPilotStudentState() {
+  try {
+    localStorage.removeItem(PILOT_CALCULATOR_STATE_STORAGE_KEY);
+    localStorage.removeItem(INTRO_VIDEO_STORAGE_KEY);
+  } catch {
+    // Shared-device cleanup is best effort.
+  }
   clearRiasecSummary();
   clearCareerSuggestionCache();
 }
@@ -469,6 +522,7 @@ export default function App() {
   const introVideoEmbedUrl = useMemo(() => getIntroVideoEmbedUrl(INTRO_VIDEO_URL), []);
   const isWelcomeScreen = routePath === '/' && safeSteps[state.currentStep] === 'Welcome';
   const currentUserId = session?.user?.id ?? null;
+  const isAnonymousPilot = !currentUserId;
 
   // Persistence and session effects
   useEffect(() => {
@@ -476,15 +530,6 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (!currentUserId) {
-      setState(INITIAL_STATE);
-      setRiasecSummary(getHistoryRiasecSummary());
-      setHasCompletedRiasecSetup(!!getHistoryRiasecSummary());
-      setShowHistory(false);
-      setHasHydratedStudentState(false);
-      return;
-    }
-
     const routeSummary = getHistoryRiasecSummary();
     const storedSummary = loadRiasecSummary(currentUserId);
     const nextSummary = routeSummary || storedSummary;
@@ -497,7 +542,7 @@ export default function App() {
   }, [currentUserId]);
 
   useEffect(() => {
-    if (!currentUserId || !hasHydratedStudentState) return;
+    if (!hasHydratedStudentState) return;
 
     const storageKey = getCalculatorStateStorageKey(currentUserId);
     if (!storageKey) return;
@@ -709,7 +754,13 @@ export default function App() {
   };
 
   const resetQuiz = () => {
+    if (isAnonymousPilot) {
+      clearPilotStudentState();
+      setRiasecSummary(null);
+      setHasCompletedRiasecSetup(false);
+    }
     setState(INITIAL_STATE);
+    setShowHistory(false);
     window.scrollTo(0, 0);
   };
 
@@ -812,6 +863,7 @@ export default function App() {
     }
 
     clearLegacySharedStudentState();
+    clearPilotStudentState();
     setState(INITIAL_STATE);
     setRiasecSummary(null);
     setHasCompletedRiasecSetup(false);
@@ -844,6 +896,11 @@ export default function App() {
                 Ever wondered what it actually costs to live the life you want in Texas? 
                 Let's build your future budget together.
               </p>
+              <div className="rounded-2xl border border-emerald-100 bg-emerald-50 px-5 py-4 text-left">
+                <p className="text-sm font-bold leading-relaxed text-emerald-900">
+                  For this pilot, your answers are not saved to our database. Your results stay on this device unless you choose to download, print, or share them.
+                </p>
+              </div>
             </div>
             <div className="flex w-full max-w-md flex-col gap-4">
               <button 
@@ -1120,7 +1177,7 @@ export default function App() {
         );
 
       case 'Results':
-        return <ResultsStep state={state} monthlyTotal={monthlyTotal} annualTotal={annualTotal} recommendedSalary={recommendedSalary} onReset={resetQuiz} userId={session?.user?.id} regionOptions={activeRegions} internetOptions={activeInternetOptions} utilityOptions={activeUtilityOptions} streamingOptions={activeStreamingOptions} subscriptionOptions={activeSubscriptionOptions} insuranceOptions={activeInsuranceOptions} phoneOptions={activePhoneOptions} phonePlanOptions={activePhonePlanOptions} transportOptions={activeTransportOptions} riasecSummary={riasecSummary} isCalculatorDataLoading={calculatorDataLoading} />;
+        return <ResultsStep state={state} monthlyTotal={monthlyTotal} annualTotal={annualTotal} recommendedSalary={recommendedSalary} onReset={resetQuiz} userId={session?.user?.id} isAnonymousPilot={isAnonymousPilot} regionOptions={activeRegions} internetOptions={activeInternetOptions} utilityOptions={activeUtilityOptions} streamingOptions={activeStreamingOptions} subscriptionOptions={activeSubscriptionOptions} insuranceOptions={activeInsuranceOptions} phoneOptions={activePhoneOptions} phonePlanOptions={activePhonePlanOptions} transportOptions={activeTransportOptions} riasecSummary={riasecSummary} isCalculatorDataLoading={calculatorDataLoading} />;
 
       default:
         return <div>Step not found</div>;
@@ -1131,15 +1188,7 @@ export default function App() {
     return <RiasecQuiz onTryLifestyle={handleRiasecHandoff} />;
   }
 
-  if (!session) {
-    if (routePath === '/admin') {
-      return (
-        <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6">
-          <PilotAuthGate />
-        </div>
-      );
-    }
-
+  if (routePath === '/admin' && !session) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6">
         <PilotAuthGate />
@@ -1214,20 +1263,22 @@ export default function App() {
 
       <div className="relative min-h-screen bg-slate-50 pb-52 font-sans text-slate-900 sm:pb-32">
         <Nav
-          sessionEmail={session.user.email}
+          sessionEmail={session?.user?.email}
           stepLabel={showHistory ? 'History' : safeSteps[state.currentStep]}
           currentQuestionStep={currentQuestionStep}
           totalQuestionSteps={totalQuestionSteps}
           progressPercent={progressPercent}
           showProgress={!showHistory && state.currentStep > 0 && state.currentStep < safeSteps.length - 1}
+          showHistoryButton={!isAnonymousPilot}
+          showSignOut={!isAnonymousPilot}
           onReset={resetQuiz}
           onToggleHistory={() => setShowHistory(!showHistory)}
           onSignOut={handleSignOut}
         />
 
         <main className="mx-auto max-w-5xl px-4 pt-4 sm:px-6 sm:pt-8">
-          {showHistory ? (
-            <HistoryPage userId={session.user.id} />
+          {showHistory && currentUserId ? (
+            <HistoryPage userId={currentUserId} />
           ) : (
             <AnimatePresence mode="wait">
               <motion.div
@@ -1855,7 +1906,7 @@ function HistoryPage({ userId }: { userId: string }) {
 }
 
 // Results.
-function ResultsStep({ state, monthlyTotal, annualTotal, recommendedSalary, onReset, userId, regionOptions, internetOptions, utilityOptions, streamingOptions, subscriptionOptions, insuranceOptions, phoneOptions, phonePlanOptions, transportOptions, riasecSummary, isCalculatorDataLoading }: any) {
+function ResultsStep({ state, monthlyTotal, annualTotal, recommendedSalary, onReset, userId, isAnonymousPilot, regionOptions, internetOptions, utilityOptions, streamingOptions, subscriptionOptions, insuranceOptions, phoneOptions, phonePlanOptions, transportOptions, riasecSummary, isCalculatorDataLoading }: any) {
   const currentRegion = regionOptions.find((r: any) => r.id === state.regionId) || regionOptions[0] || REGIONS[5];
   const finalizedRecommendedSalary = Math.round(recommendedSalary);
   const displayedRecommendedSalary = formatWholeDollar(finalizedRecommendedSalary);
@@ -1864,6 +1915,7 @@ function ResultsStep({ state, monthlyTotal, annualTotal, recommendedSalary, onRe
   const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [careers, setCareers] = useState<CareerSuggestion[]>([]);
   const [isLoadingCareers, setIsLoadingCareers] = useState(true);
+  const [copyStatus, setCopyStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [openCareerKey, setOpenCareerKey] = useState<string | null>(null);
   const [expandedBreakdownCategories, setExpandedBreakdownCategories] = useState<string[]>([]);
   const latestCareerFetchKey = useRef('');
@@ -1878,6 +1930,15 @@ function ResultsStep({ state, monthlyTotal, annualTotal, recommendedSalary, onRe
     let isActive = true;
     latestCareerFetchKey.current = careerFetchKey;
     setOpenCareerKey(null);
+
+    if (isAnonymousPilot) {
+      setCareers(buildStaticCareerExamples(finalizedRecommendedSalary, currentRegion.name, matcherRiasecCode));
+      setIsLoadingCareers(false);
+      return () => {
+        isActive = false;
+      };
+    }
+
     setIsLoadingCareers(true);
 
     const fetchCareers = async (fetchKey: string) => {
@@ -1900,9 +1961,11 @@ function ResultsStep({ state, monthlyTotal, annualTotal, recommendedSalary, onRe
     return () => {
       isActive = false;
     };
-  }, [careerFetchKey, finalizedRecommendedSalary, currentRegion.name, isCalculatorDataLoading]);
+  }, [careerFetchKey, finalizedRecommendedSalary, currentRegion.name, matcherRiasecCode, isAnonymousPilot, isCalculatorDataLoading]);
 
   const handleSaveResult = async () => {
+    if (!userId) return;
+
     setIsSaving(true);
     setSaveStatus('idle');
     try {
@@ -2011,6 +2074,46 @@ function ResultsStep({ state, monthlyTotal, annualTotal, recommendedSalary, onRe
     });
     return Object.entries(categories).map(([name, value]) => ({ name, value }));
   }, [details]);
+
+  const resultSummaryText = useMemo(() => {
+    const topCategories = categoryData
+      .slice(0, 5)
+      .map((item) => `${item.name}: $${formatMonthlyCurrency(item.value)}/mo`)
+      .join('\n');
+
+    return [
+      'Lifestyle Calculator Results',
+      `Region: ${currentRegion.name}`,
+      `Monthly total: $${formatMonthlyCurrency(monthlyTotal)}`,
+      `Minimum annual salary: $${displayedRecommendedSalary}`,
+      riasecSummary?.topThree ? `RIASEC code: ${riasecSummary.topThree}` : null,
+      '',
+      'Budget categories:',
+      topCategories || 'No categories selected yet.',
+    ].filter((line): line is string => line !== null).join('\n');
+  }, [categoryData, currentRegion.name, displayedRecommendedSalary, monthlyTotal, riasecSummary]);
+
+  const handlePrintResults = () => {
+    window.print();
+  };
+
+  const handleCopySummary = async () => {
+    setCopyStatus('idle');
+    try {
+      await navigator.clipboard.writeText(resultSummaryText);
+      setCopyStatus('success');
+      window.setTimeout(() => setCopyStatus('idle'), 2500);
+    } catch {
+      setCopyStatus('error');
+      window.setTimeout(() => setCopyStatus('idle'), 2500);
+    }
+  };
+
+  const resultMailtoHref = useMemo(() => {
+    const subject = encodeURIComponent('My Lifestyle Calculator Results');
+    const body = encodeURIComponent(resultSummaryText);
+    return `mailto:?subject=${subject}&body=${body}`;
+  }, [resultSummaryText]);
 
   const breakdownRows = useMemo(() => {
     const groupedCategories = new Set(RESULTS_GROUPED_CATEGORIES);
@@ -2232,26 +2335,61 @@ function ResultsStep({ state, monthlyTotal, annualTotal, recommendedSalary, onRe
               This represents the total cost of your selected lifestyle over one full year (12 months).
             </p>
             
-            <button 
-              onClick={handleSaveResult}
-              disabled={isSaving}
-              className={`w-full py-4 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all ${
-                saveStatus === 'success' 
-                  ? 'bg-green-400 text-white' 
-                  : saveStatus === 'error'
-                  ? 'bg-red-400 text-white'
-                  : 'bg-white/20 hover:bg-white/30 text-white'
-              }`}
-            >
-              {isSaving ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
-              ) : saveStatus === 'success' ? (
-                <Check className="w-5 h-5" />
-              ) : (
-                <Save className="w-5 h-5" />
-              )}
-              {saveStatus === 'success' ? 'Saved!' : saveStatus === 'error' ? 'Error Saving' : 'Save My Result'}
-            </button>
+            {isAnonymousPilot ? (
+              <div className="space-y-3">
+                <div className="rounded-2xl border border-white/20 bg-white/10 p-4">
+                  <p className="text-sm font-bold leading-relaxed text-orange-50">
+                    Your results are only on this device. If you are using a shared device, tap Reset when you are done.
+                  </p>
+                </div>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 lg:grid-cols-1">
+                  <button
+                    type="button"
+                    onClick={handlePrintResults}
+                    className="flex items-center justify-center gap-2 rounded-2xl bg-white/20 px-4 py-3 text-sm font-bold text-white transition-all hover:bg-white/30"
+                  >
+                    <Printer className="h-4 w-4" />
+                    Print / Save PDF
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleCopySummary}
+                    className="flex items-center justify-center gap-2 rounded-2xl bg-white/20 px-4 py-3 text-sm font-bold text-white transition-all hover:bg-white/30"
+                  >
+                    <Copy className="h-4 w-4" />
+                    {copyStatus === 'success' ? 'Copied!' : copyStatus === 'error' ? 'Copy Failed' : 'Copy Summary'}
+                  </button>
+                  <a
+                    href={resultMailtoHref}
+                    className="flex items-center justify-center gap-2 rounded-2xl bg-white/20 px-4 py-3 text-sm font-bold text-white transition-all hover:bg-white/30"
+                  >
+                    <Mail className="h-4 w-4" />
+                    Email Yourself
+                  </a>
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={handleSaveResult}
+                disabled={isSaving}
+                className={`w-full py-4 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all ${
+                  saveStatus === 'success'
+                    ? 'bg-green-400 text-white'
+                    : saveStatus === 'error'
+                    ? 'bg-red-400 text-white'
+                    : 'bg-white/20 hover:bg-white/30 text-white'
+                }`}
+              >
+                {isSaving ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : saveStatus === 'success' ? (
+                  <Check className="w-5 h-5" />
+                ) : (
+                  <Save className="w-5 h-5" />
+                )}
+                {saveStatus === 'success' ? 'Saved!' : saveStatus === 'error' ? 'Error Saving' : 'Save My Result'}
+              </button>
+            )}
 
             <div className="pt-6 border-t border-white/20">
               <p className="text-sm font-bold text-orange-100 uppercase tracking-widest mb-4">What's Next?</p>
@@ -2277,11 +2415,21 @@ function ResultsStep({ state, monthlyTotal, annualTotal, recommendedSalary, onRe
               <div className="p-2 bg-indigo-100 text-indigo-600 rounded-xl">
                 <Sparkles className="w-6 h-6" />
               </div>
-              <h3 className="text-xl font-bold text-slate-900">AI Career Matcher</h3>
+              <h3 className="text-xl font-bold text-slate-900">
+                {isAnonymousPilot ? 'Explore Career Ideas' : 'AI Career Matcher'}
+              </h3>
             </div>
             
             <p className="text-sm text-slate-500 leading-relaxed">
-              {riasecSummary ? (
+              {isAnonymousPilot && riasecSummary ? (
+                <>
+                  These example pathways are based on your <span className="font-bold text-slate-900">{riasecSummary.topThree}</span> RIASEC pattern, target salary of <span className="font-bold text-slate-900">${displayedRecommendedSalary}</span>, and region. They are not AI-generated.
+                </>
+              ) : isAnonymousPilot ? (
+                <>
+                  These example pathways are based on your target salary of <span className="font-bold text-slate-900">${displayedRecommendedSalary}</span> and region. They are not AI-generated.
+                </>
+              ) : riasecSummary ? (
                 <>
                   Based on your <span className="font-bold text-slate-900">{riasecSummary.topThree}</span> RIASEC pattern and target salary of <span className="font-bold text-slate-900">${displayedRecommendedSalary}</span>, here are careers to explore in <span className="font-bold text-slate-900">{currentRegion.name}</span>:
                 </>
