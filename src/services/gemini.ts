@@ -31,7 +31,7 @@ export async function getCareerSuggestions(salary: number, region: string): Prom
       throw new Error('Authentication required for career suggestions.');
     }
 
-    const response = await fetch('/api/gemini-career-match', {
+    const response = await fetch('/api/career-match', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -44,14 +44,16 @@ export async function getCareerSuggestions(salary: number, region: string): Prom
     });
 
     if (!response.ok) {
-      throw new Error(`Career match request failed with status ${response.status}`);
+      throw new Error('Career match request failed.');
     }
 
     const payload = await response.json();
     const suggestions = Array.isArray(payload?.suggestions) ? payload.suggestions : [];
     return suggestions.filter(isCareerSuggestion);
   } catch (error) {
-    console.error('Error fetching career suggestions:', error);
+    if (import.meta.env.DEV) {
+      console.error('Error fetching career suggestions:', error);
+    }
     return [];
   }
 }
