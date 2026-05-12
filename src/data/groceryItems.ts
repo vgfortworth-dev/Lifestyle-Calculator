@@ -245,7 +245,7 @@ function buildCatalog(rawItems: RawGroceryItem[]): GroceryItem[] {
     .sort((a, b) => (a.sortOrder ?? Number.MAX_SAFE_INTEGER) - (b.sortOrder ?? Number.MAX_SAFE_INTEGER));
 }
 
-export const RAW_GROCERY_ITEMS: RawGroceryItem[] = [
+const RAW_GROCERY_ITEM_ROWS: RawGroceryItem[] = [
   { id: 'bananas-walmart', productKey: 'bananas', name: 'Bananas', category: 'Produce', productType: 'Fruit', quality: 'Cheapest', store: 'Wal-Mart', quantity: '2 lb bunch', itemPrice: 1.82, shopperTags: ['budget', 'fresh', 'essential'] },
   { id: 'bananas-kroger', productKey: 'bananas', name: 'Bananas', category: 'Produce', productType: 'Fruit', quality: 'Store Brand', store: 'Kroger', quantity: '2 lb bunch', itemPrice: 1.98, shopperTags: ['budget', 'fresh', 'essential'] },
   { id: 'honeycrisp-apples', productKey: 'honeycrisp-apples', name: 'Honeycrisp Apples', category: 'Produce', productType: 'Fruit', quality: 'Mid-Grade', store: 'Target', quantity: '2 lb bag', itemPrice: 4.99, shopperTags: ['fresh'] },
@@ -340,7 +340,9 @@ export const RAW_GROCERY_ITEMS: RawGroceryItem[] = [
   { id: 'coffee-creamer-kroger', productKey: 'coffee-creamer', name: 'Coffee Creamer', category: 'Drinks / Coffee', productType: 'Dairy', quality: 'Mid-Grade', store: 'Kroger', quantity: '32 oz bottle', itemPrice: 4.99, shopperTags: ['brand'] },
   { id: 'organic-coffee-target', productKey: 'organic-ground-coffee', name: 'Organic Ground Coffee', category: 'Premium / Specialty', productType: 'Coffee', quality: 'Premium/Organic', store: 'Target', quantity: '10 oz bag', itemPrice: 10.99, shopperTags: ['premium', 'organic'] },
   { id: 'almond-milk-walmart', productKey: 'almond-milk', name: 'Almond Milk', category: 'Premium / Specialty', productType: 'Drinks', quality: 'Allergy-Free Option', store: 'Wal-Mart', quantity: 'Half gallon carton', itemPrice: 3.99, shopperTags: ['allergy-friendly'] },
-].map((item) => ({
+];
+
+export const RAW_GROCERY_ITEMS: RawGroceryItem[] = RAW_GROCERY_ITEM_ROWS.map((item): RawGroceryItem => ({
   ...item,
   imageUrl: item.imageUrl || GROCERY_IMAGE_URLS_BY_PRODUCT_KEY[item.productKey] || GROCERY_PLACEHOLDER_IMAGE_URL,
 }));
